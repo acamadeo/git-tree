@@ -1,12 +1,12 @@
 package commands
 
-func NewCmdDrop(context *Context) *Command {
+func newCmdDrop() *Command {
 	return &Command{
 		Name: "drop",
-		Run:  RunDrop,
+		Run:  runDrop,
 	}
 }
 
-func RunDrop(context *Context, args []string) error {
+func runDrop(context *Context, args []string) error {
 	return nil
 }

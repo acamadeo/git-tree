@@ -1,33 +1,58 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
+
+	git "github.com/libgit2/git2go/v34"
 )
 
-func NewCmdInit(context *Context) *Command {
+func newCmdInit() *Command {
 	return &Command{
-		Name: "init",
-		Run:  RunInit,
+		Name:         "init",
+		Run:          runInit,
+		ValidateArgs: validateInitArgs,
 	}
 }
 
-func RunInit(context *Context, args []string) error {
+func runInit(context *Context, args []string) error {
 	return nil
 }
 
-func validateRunArgs(args []string) error {
+// TODO: Handle special cases like:
+//   - Detached HEAD
+//   - HEAD is not at the tip of a git branch
+func validateInitArgs(context *Context, args []string) error {
 	if len(args) == 0 {
-		return nil
+		return validateInitArgless(context)
 	}
 
 	if args[0] != "-b" {
-		msg := fmt.Sprintf("List of branches should be preceded by %q.", "-b")
-		return errors.New(msg)
+		return fmt.Errorf("List of branches should be preceded by %q.", "-b")
 	}
 
-	// TODO LATER: Validate that the branch names are all actual branches in the
-	// git repo!
+	branchNames := args[1:]
+	if len(branchNames) == 0 {
+		return fmt.Errorf("-b should be followed by a list of branches.")
+	}
+
+	for _, branch := range branchNames {
+		if _, err := context.Repo.LookupBranch(branch, git.BranchLocal); err != nil {
+			return fmt.Errorf("Branch %q does not exist in the git repository.", branch)
+		}
+	}
+
+	return nil
+}
+
+func validateInitArgless(context *Context) error {
+	head, err := context.Repo.Head()
+	if err != nil {
+		return fmt.Errorf("Cannot find HEAD reference.")
+	}
+
+	if !head.IsBranch() {
+		return fmt.Errorf("HEAD is not a branch.")
+	}
 
 	return nil
 }

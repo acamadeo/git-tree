@@ -6,25 +6,38 @@ import (
 
 	"github.com/abaresk/git-tree/commands"
 	git "github.com/libgit2/git2go/v34"
-	"github.com/zyedidia/generic/queue"
 )
 
 func main() {
-	q := queue.New[int]()
-	q.Enqueue(1)
-
-	fmt.Println(q.Dequeue())
-
-	pwd, _ := os.Getwd()
-	repo, err := git.OpenRepository(pwd)
-	if err != nil {
-		fmt.Printf("Current directory %q is not a git repository.", pwd)
+	if len(os.Args) < 2 {
+		// TODO: We should print usage()
+		printFatalf("No command was specified.\n")
 	}
 
-	context := &commands.Context{
+	cwd, _ := os.Getwd()
+	context := createContext(cwd)
+
+	runError := commands.RunCommand(context, os.Args[1], os.Args[2:])
+	if runError != nil {
+		printFatalf(runError.Error())
+	}
+}
+
+func createContext(cwd string) *commands.Context {
+	repo, err := git.OpenRepository(cwd)
+	if err != nil {
+		printFatalf("Current directory %q is not a git repository.", cwd)
+	}
+
+	return &commands.Context{
 		Repo: repo,
 	}
-	fmt.Println("Repo path:")
-	fmt.Println(repo.Path())
-	_ = context
+}
+
+func printFatalf(format string, a ...any) {
+	fmt.Print("ERROR: ")
+	fmt.Printf(format, a...)
+	fmt.Print("\n")
+
+	os.Exit(1)
 }
