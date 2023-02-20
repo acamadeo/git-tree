@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/abaresk/git-tree/commands"
-	"github.com/abaresk/git-tree/git"
+	git "github.com/libgit2/git2go/v34"
 	"github.com/zyedidia/generic/queue"
 )
 
