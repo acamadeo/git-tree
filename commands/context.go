@@ -1,7 +1,7 @@
 package commands
 
 import (
-	git "github.com/libgit2/git2go/v34"
+	"github.com/abaresk/git-tree/git"
 )
 
 // TODO: Install git2go using static linking using most recent stable branch

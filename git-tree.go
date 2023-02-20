@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/abaresk/git-tree/commands"
-	git "github.com/libgit2/git2go/v34"
+	"github.com/abaresk/git-tree/git"
 	"github.com/zyedidia/generic/queue"
 )
 
@@ -24,5 +24,7 @@ func main() {
 	context := &commands.Context{
 		Repo: repo,
 	}
+	fmt.Println("Repo path:")
+	fmt.Println(repo.Path())
 	_ = context
 }
