@@ -7,25 +7,15 @@ import (
 	"strings"
 
 	"github.com/abaresk/git-tree/models"
+	git "github.com/libgit2/git2go/v34"
+	"golang.org/x/exp/maps"
 )
 
-// Storage representation of a BranchMap.
-//
-// Mirrors the structure of each line in the branch_map text file.
-type BranchMap struct {
-	Entries []BranchMapEntry
-}
-
-type BranchMapEntry struct {
-	// Name of parent branch.
-	Parent string
-	// Name of a child branch.
-	Child string
-}
-
-// Read obsolescence map file
-func ReadBranchMap(filepath string) *models.BranchMap {
+// Read branch map file.
+func ReadBranchMap(repo *git.Repository, filepath string) *models.BranchMap {
 	readFile, _ := os.Open(filepath)
+	defer readFile.Close()
+
 	fileScanner := bufio.NewScanner(readFile)
 	fileScanner.Split(bufio.ScanLines)
 
@@ -34,76 +24,102 @@ func ReadBranchMap(filepath string) *models.BranchMap {
 		lines = append(lines, fileScanner.Text())
 	}
 
-	readFile.Close()
-
-	branchMap := string2BranchMap(lines)
-	modelBranchMap := toBranchMapModel(&branchMap)
-	return &modelBranchMap
+	return string2BranchMap(repo, lines)
 }
 
-// Write obsolescence map file
+// Write branch map file.
 func WriteBranchMap(branchMap *models.BranchMap, filepath string) {
-	storeBranchMap := fromBranchMapModel(branchMap)
-	overwriteFile(filepath, branchMap2String(&storeBranchMap))
+	overwriteFile(filepath, branchMap2String(branchMap))
 }
 
 /**
- * Translates to and from the model data structure.
+ * Converts branch to and from a string representation for storage.
  */
 
-func fromBranchMapModel(branchMap *models.BranchMap) BranchMap {
-	output := BranchMap{}
-
-	for _, entry := range branchMap.Entries {
-		for _, child := range entry.Children {
-			outputEntry := BranchMapEntry{Parent: entry.Parent, Child: child}
-			output.Entries = append(output.Entries, outputEntry)
-		}
-	}
-
-	return output
-}
-
-func toBranchMapModel(branchMap *BranchMap) models.BranchMap {
-	childMap := map[string][]string{}
-
-	for _, entry := range branchMap.Entries {
-		children := childMap[entry.Parent]
-		children = append(children, entry.Child)
-	}
-
-	output := models.BranchMap{}
-	for parent, children := range childMap {
-		entry := models.BranchMapEntry{Parent: parent, Children: children}
-		output.Entries = append(output.Entries, entry)
-	}
-
-	return output
-}
-
-/**
- * Converts between storage data structure and string representation.
- */
-
-func branchMap2String(branchMap *BranchMap) string {
+func branchMap2String(branchMap *models.BranchMap) string {
 	output := []string{}
 
-	for _, entry := range branchMap.Entries {
-		entryString := fmt.Sprintf("%s %s", entry.Parent, entry.Child)
-		output = append(output, entryString)
+	// First print the name of the root branch.
+	root, _ := branchMap.Root.Name()
+	output = append(output, root)
+
+	// Each branch in the tree has its own line. The line starts with the branch
+	// name and is followed by a space-delimited list of the names of the branch's
+	// children.
+	for branch, children := range branchMap.Children {
+		branchName, _ := branch.Name()
+		entry := fmt.Sprintf("%s ", branchName)
+
+		for _, child := range children {
+			childBranchName, _ := child.Name()
+			entry += fmt.Sprintf("%s ", childBranchName)
+		}
+		output = append(output, entry)
 	}
 
 	return strings.Join(output, "\n")
 }
 
-func string2BranchMap(input []string) BranchMap {
-	output := BranchMap{}
+func string2BranchMap(repo *git.Repository, input []string) *models.BranchMap {
+	// First line is the name of the root branch.
+	root, _ := repo.LookupBranch(input[0], git.BranchLocal)
 
-	for _, line := range input {
-		parts := strings.Split(line, " ")
-		entry := BranchMapEntry{Parent: parts[0], Child: parts[1]}
-		output.Entries = append(output.Entries, entry)
+	// Create a lookup table from branch name to its *git.Branch.
+	branchNames := extractBranchNames(input[1:])
+	nameMap := namesToBranches(repo, branchNames)
+
+	return &models.BranchMap{
+		Root:     root,
+		Children: childrenMap(input[1:], nameMap),
+	}
+}
+
+// Return all the branches used in the parent-children string representation.
+func extractBranchNames(childrenLines []string) []string {
+	nameSet := map[string]struct{}{}
+	for _, line := range childrenLines {
+		names := strings.Split(line, " ")
+		for _, name := range names {
+			nameSet[name] = struct{}{}
+		}
+	}
+	return maps.Keys(nameSet)
+}
+
+// NOTE: This should probably return an error because it's easy for the branches
+// to get clobbered (e.g. user manually updates a branch name).
+func namesToBranches(repo *git.Repository, names []string) map[string]*git.Branch {
+	branches := map[string]*git.Branch{}
+	for _, name := range names {
+		branch, _ := repo.LookupBranch(name, git.BranchLocal)
+		branches[name] = branch
+	}
+	return branches
+}
+
+// Construct a mapping from each branch to its children branches.
+//
+// Receives the lines in the string representation of the children map. Also
+// receives a lookup table from branch name to its *git.Branch.
+func childrenMap(childrenLines []string, nameMap map[string]*git.Branch) map[*git.Branch]models.BranchList {
+	childrenMap := map[*git.Branch]models.BranchList{}
+
+	for _, line := range childrenLines {
+		names := strings.Split(line, " ")
+
+		// First name is the parent branch. Following names are its children.
+		parent := names[0]
+		children := names[1:]
+
+		parentBranch := nameMap[parent]
+		childrenMap[parentBranch] = models.BranchList{}
+
+		// Add each child branch under its parent.
+		for _, child := range children {
+			childBranch := nameMap[child]
+			childrenMap[parentBranch] = append(childrenMap[parentBranch], childBranch)
+		}
 	}
 
-	return output
+	return childrenMap
 }
