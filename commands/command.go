@@ -22,9 +22,14 @@ var gitTreeCommands []*Command = []*Command{
 func RunCommand(context *Context, name string, args []string) error {
 	for _, cmd := range gitTreeCommands {
 		if cmd.Name == name || stringIn(cmd.Aliases, name) {
-			if err := cmd.ValidateArgs(context, args); err != nil {
-				return err
+			// First perform any argument validation.
+			if cmd.ValidateArgs != nil {
+				if err := cmd.ValidateArgs(context, args); err != nil {
+					return err
+				}
 			}
+
+			// Then run the command.
 			return cmd.Run(context, args)
 		}
 	}

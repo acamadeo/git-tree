@@ -4,14 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
+	"github.com/abaresk/git-tree/common"
 	"github.com/abaresk/git-tree/models"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
-
-const gitTreeRoot = "git-tree-root"
 
 // TODO: Handle special cases like:
 //   - Detached HEAD
@@ -31,8 +29,7 @@ func newCmdInit() *Command {
 func runInit(context *Context, args []string) error {
 	// NOTE: For now, let's make life easier and just store the branch map in
 	// our own file (not managed through git).
-	gitPath := context.Repo.Path()
-	branchFile := filepath.Join(gitPath, "tree/branches")
+	branchFile := common.BranchMapPath(context.Repo.Path())
 
 	// If the branch map file already exists, then `git tree init` has already
 	// been run.
@@ -110,7 +107,6 @@ func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
 	return branches
 }
 
-// NOTE TO SELF: This new branch needs to be cleaned up in `git tree drop`!!
 func createRootBranch(repo *git.Repository, branches []*git.Branch) (*git.Branch, error) {
 	var rootOid *git.Oid
 	// TODO: Handle argless case.
@@ -123,7 +119,7 @@ func createRootBranch(repo *git.Repository, branches []*git.Branch) (*git.Branch
 	}
 
 	rootCommit, _ := repo.LookupCommit(rootOid)
-	return repo.CreateBranch(gitTreeRoot, rootCommit, false)
+	return repo.CreateBranch(common.GitTreeRootBranch, rootCommit, false)
 }
 
 func branchOids(branches []*git.Branch) []*git.Oid {

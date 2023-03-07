@@ -23,7 +23,3 @@ func overwriteFile(filename string, contents string) {
 	newFile.WriteString(contents)
 	newFile.Close()
 }
-
-// TODO: We'll probably want a read util that we can use in
-//  - ReadBranchMap()
-//  - ReadObsolescenceMap()

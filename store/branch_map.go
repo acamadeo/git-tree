@@ -12,6 +12,8 @@ import (
 )
 
 // Read branch map file.
+//
+// It is expected that the file exists.
 func ReadBranchMap(repo *git.Repository, filepath string) *models.BranchMap {
 	readFile, _ := os.Open(filepath)
 	defer readFile.Close()
