@@ -16,16 +16,15 @@ func newCmdDrop() *Command {
 }
 
 func runDrop(context *Context, args []string) error {
-	branchMapPath := common.BranchMapPath(context.Repo.Path())
-
-	// If the branch map file does not exist, the repo must not be initialized.
-	// Notify the user that running `git-tree drop` is a no-op.
-	if _, err := os.Stat(branchMapPath); err != nil {
+	// If git-tree is not initalized, notify the user that running
+	// `git-tree drop` is a no-op.
+	if !common.GitTreeInited(context.Repo.Path()) {
 		fmt.Println("There was nothing to drop.")
 		return nil
 	}
 
 	// Read the branch map file.
+	branchMapPath := common.BranchMapPath(context.Repo.Path())
 	branchMap := store.ReadBranchMap(context.Repo, branchMapPath)
 
 	// Delete the root branch created by `git-tree init`.

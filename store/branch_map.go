@@ -72,7 +72,7 @@ func string2BranchMap(repo *git.Repository, input []string) *models.BranchMap {
 
 	return &models.BranchMap{
 		Root:     root,
-		Children: childrenMap(input[1:], nameMap),
+		Children: populateChildrenMap(input[1:], nameMap),
 	}
 }
 
@@ -80,7 +80,7 @@ func string2BranchMap(repo *git.Repository, input []string) *models.BranchMap {
 func extractBranchNames(childrenLines []string) []string {
 	nameSet := map[string]struct{}{}
 	for _, line := range childrenLines {
-		names := strings.Split(line, " ")
+		names := strings.Split(strings.TrimSpace(line), " ")
 		for _, name := range names {
 			nameSet[name] = struct{}{}
 		}
@@ -99,15 +99,15 @@ func namesToBranches(repo *git.Repository, names []string) map[string]*git.Branc
 	return branches
 }
 
-// Construct a mapping from each branch to its children branches.
+// Populate a mapping from each branch to its children branches.
 //
 // Receives the lines in the string representation of the children map. Also
 // receives a lookup table from branch name to its *git.Branch.
-func childrenMap(childrenLines []string, nameMap map[string]*git.Branch) map[*git.Branch]models.BranchList {
-	childrenMap := map[*git.Branch]models.BranchList{}
+func populateChildrenMap(childrenLines []string, nameMap map[string]*git.Branch) map[*git.Branch]models.BranchList {
+	childrenMap := initChildrenMap(nameMap)
 
 	for _, line := range childrenLines {
-		names := strings.Split(line, " ")
+		names := strings.Split(strings.TrimSpace(line), " ")
 
 		// First name is the parent branch. Following names are its children.
 		parent := names[0]
@@ -123,5 +123,16 @@ func childrenMap(childrenLines []string, nameMap map[string]*git.Branch) map[*gi
 		}
 	}
 
+	return childrenMap
+}
+
+// Initialize each branch as a key of the children map. The initial value for
+// each branch is an empty list of child branches.
+func initChildrenMap(nameMap map[string]*git.Branch) map[*git.Branch]models.BranchList {
+	childrenMap := map[*git.Branch]models.BranchList{}
+
+	for _, branch := range nameMap {
+		childrenMap[branch] = models.BranchList{}
+	}
 	return childrenMap
 }

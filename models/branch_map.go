@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -114,4 +116,39 @@ func isAncestor(repo *git.Repository, a *git.Branch, b *git.Branch) bool {
 
 	ancestorOid, _ := repo.MergeBase(oidA, oidB)
 	return oidA.Equal(ancestorOid)
+}
+
+// Print a BranchMap (for debugging).
+func (b *BranchMap) String() string {
+	output := ""
+	rootName, _ := b.Root.Name()
+	output += fmt.Sprintf("Root: %s\n", rootName)
+
+	for parent, children := range b.Children {
+		parentName, _ := parent.Name()
+		output += fmt.Sprintf(" - %s: ", parentName)
+
+		if len(children) == 0 {
+			output += "<empty>\n"
+			continue
+		}
+
+		for _, child := range children {
+			childName, _ := child.Name()
+			output += fmt.Sprintf("%s ", childName)
+		}
+		output += "\n"
+	}
+
+	return output
+}
+
+func (b *BranchMap) FindBranch(branchName string) *git.Branch {
+	for parent := range b.Children {
+		name, _ := parent.Name()
+		if name == branchName {
+			return parent
+		}
+	}
+	return nil
 }

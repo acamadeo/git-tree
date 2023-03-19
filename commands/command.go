@@ -17,6 +17,7 @@ type Command struct {
 var gitTreeCommands []*Command = []*Command{
 	newCmdInit(),
 	newCmdDrop(),
+	newCmdBranch(),
 }
 
 func RunCommand(context *Context, name string, args []string) error {
