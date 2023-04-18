@@ -86,6 +86,12 @@ func addBranchToTree(repo *git.Repository, branchMap *BranchMap, curBranch *git.
 
 // Add `children` to the given branch `branch`.
 func addChildren(branchMap *BranchMap, branch *git.Branch, children []*git.Branch) {
+	// If `branch` does not exist in `branchMap`, add a key for it.
+	_, ok := branchMap.Children[branch]
+	if !ok {
+		branchMap.Children[branch] = BranchList{}
+	}
+
 	curChildren := branchMap.Children[branch]
 	newChildren := append(curChildren, children...)
 	branchMap.Children[branch] = newChildren
@@ -93,20 +99,25 @@ func addChildren(branchMap *BranchMap, branch *git.Branch, children []*git.Branc
 
 // Remove `children` from the given branch `branch`.
 func removeChildren(branchMap *BranchMap, branch *git.Branch, children []*git.Branch) {
-	curChildren := branchMap.Children[branch]
 	for _, child := range children {
-		removeChild(curChildren, child)
+		removeChild(branchMap, branch, child)
 	}
 }
 
 // Remove a child from a list of children by value.
-func removeChild(children []*git.Branch, child *git.Branch) []*git.Branch {
+func removeChild(branchMap *BranchMap, branch *git.Branch, child *git.Branch) {
+	children := branchMap.Children[branch]
 	for i, c := range children {
 		if c == child {
-			return append(children[:i], children[i+1:]...)
+			children = append(children[:i], children[i+1:]...)
 		}
 	}
-	return children
+	branchMap.Children[branch] = children
+
+	// If there are no more children left, delete map entry for `branch`.
+	if len(children) == 0 {
+		delete(branchMap.Children, branch)
+	}
 }
 
 // Returns true if reference `a` is an ancestor of reference `b`.
@@ -151,4 +162,83 @@ func (b *BranchMap) FindBranch(branchName string) *git.Branch {
 		}
 	}
 	return nil
+}
+
+// Returns the parent of a branch.
+func (b *BranchMap) FindParent(branchName string) *git.Branch {
+	for parent, children := range b.Children {
+		for _, child := range children {
+			childName, _ := child.Name()
+			if childName == branchName {
+				return parent
+			}
+		}
+	}
+	return nil
+}
+
+func (b *BranchMap) FindChildren(branchName string) BranchList {
+	for parent, children := range b.Children {
+		name, _ := parent.Name()
+		if name == branchName {
+			return children
+		}
+	}
+	return nil
+}
+
+func (b *BranchMap) RemoveChildren(parentName string, children []string) {
+	parent := b.FindBranch(parentName)
+
+	for _, child := range children {
+		childBranch := b.FindBranch(child)
+		removeChild(b, parent, childBranch)
+	}
+}
+
+// Returns true if the branch `ancestor` is an ancestor of branch `descendant`.
+//
+// NOTE: Returns false if `ancestor` or `descendant` aren't tracked in the
+// BranchMap.
+func (b *BranchMap) IsBranchAncestor(ancestor string, descendant string) bool {
+	ancestorBranch := b.FindBranch(ancestor)
+	if ancestorBranch == nil {
+		return false
+	}
+
+	if b.IsBranchParent(ancestor, descendant) {
+		return true
+	}
+
+	// Recurse into each child to see if they are the parent of `descendant`.
+	ancestorChildren := b.Children[ancestorBranch]
+	for _, ancestorChild := range ancestorChildren {
+		childName, _ := ancestorChild.Branch().Name()
+		if b.IsBranchAncestor(childName, descendant) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Returns true if the branch `ancestor` is the parent of branch `descendant`.
+//
+// NOTE: Returns false if `ancestor` or `descendant` aren't tracked in the
+// BranchMap.
+func (b *BranchMap) IsBranchParent(ancestor string, child string) bool {
+	ancestorBranch := b.FindBranch(ancestor)
+	if ancestorBranch == nil {
+		return false
+	}
+
+	ancestorChildren := b.Children[ancestorBranch]
+	for _, ancestorChild := range ancestorChildren {
+		name, _ := ancestorChild.Branch().Name()
+		if name == child {
+			return true
+		}
+	}
+
+	return false
 }

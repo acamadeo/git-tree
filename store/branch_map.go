@@ -49,6 +49,11 @@ func branchMap2String(branchMap *models.BranchMap) string {
 	// name and is followed by a space-delimited list of the names of the branch's
 	// children.
 	for branch, children := range branchMap.Children {
+		// Skip branches without any children.
+		if len(children) == 0 {
+			continue
+		}
+
 		branchName, _ := branch.Name()
 		entry := fmt.Sprintf("%s ", branchName)
 

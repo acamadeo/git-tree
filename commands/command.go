@@ -18,6 +18,7 @@ var gitTreeCommands []*Command = []*Command{
 	newCmdInit(),
 	newCmdDrop(),
 	newCmdBranch(),
+	newCmdRebase(),
 }
 
 func RunCommand(context *Context, name string, args []string) error {
