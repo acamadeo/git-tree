@@ -2,7 +2,6 @@ package store
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 
@@ -38,31 +37,44 @@ func WriteBranchMap(branchMap *models.BranchMap, filepath string) {
  * Converts branch to and from a string representation for storage.
  */
 
-func branchMap2String(branchMap *models.BranchMap) string {
+func branchAndChildrenString(branchMap *models.BranchMap, branch string) string {
+	names := []string{branch}
+
+	children := branchMap.FindChildren(branch)
+	for _, child := range children {
+		childBranchName, _ := child.Name()
+		names = append(names, childBranchName)
+	}
+	return strings.Join(names, " ")
+}
+
+func branchMap2StringRecurse(branchMap *models.BranchMap, branch string) []string {
+	// Skip branches without any children.
+	children := branchMap.FindChildren(branch)
+	if len(children) == 0 {
+		return []string{}
+	}
+
 	output := []string{}
 
-	// First print the name of the root branch.
-	root, _ := branchMap.Root.Name()
-	output = append(output, root)
+	// Add the current branch's children.
+	branchAndChildren := branchAndChildrenString(branchMap, branch)
+	output = append(output, branchAndChildren)
 
-	// Each branch in the tree has its own line. The line starts with the branch
-	// name and is followed by a space-delimited list of the names of the branch's
-	// children.
-	for branch, children := range branchMap.Children {
-		// Skip branches without any children.
-		if len(children) == 0 {
-			continue
-		}
-
-		branchName, _ := branch.Name()
-		entry := fmt.Sprintf("%s ", branchName)
-
-		for _, child := range children {
-			childBranchName, _ := child.Name()
-			entry += fmt.Sprintf("%s ", childBranchName)
-		}
-		output = append(output, entry)
+	// Add children in DFS order.
+	for _, child := range children {
+		childName, _ := child.Name()
+		output = append(output, branchMap2StringRecurse(branchMap, childName)...)
 	}
+	return output
+}
+
+func branchMap2String(branchMap *models.BranchMap) string {
+	// First print the name of the root branch.
+	rootName, _ := branchMap.Root.Name()
+	output := []string{rootName}
+
+	output = append(output, branchMap2StringRecurse(branchMap, rootName)...)
 
 	return strings.Join(output, "\n")
 }
