@@ -111,10 +111,9 @@ func validateInitArgless(context *Context) error {
 }
 
 func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
-	// If there were branches passed in, use the current branch.
+	// If there were no branches passed in, initialize with all local branches.
 	if len(branchNames) == 0 {
-		head, _ := context.Repo.Head()
-		return []*git.Branch{head.Branch()}
+		return common.AllLocalBranches(context.Repo)
 	}
 
 	branches := []*git.Branch{}
@@ -128,7 +127,6 @@ func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
 
 func createRootBranch(repo *git.Repository, branches []*git.Branch) (*git.Branch, error) {
 	var rootOid *git.Oid
-	// TODO: Handle argless case.
 	if len(branches) == 1 {
 		rootOid = branches[0].Target()
 	} else {
