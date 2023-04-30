@@ -9,7 +9,7 @@ import (
 
 var RootCmd = &cobra.Command{
 	Use:   "git-tree",
-	Short: "Manage trees of git branches",
+	Short: "Manage trees of dependent git branches",
 }
 
 var InitCmd = commands.NewInitCommand()
