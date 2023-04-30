@@ -6,16 +6,34 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
-const successfulRebaseError = "IterOver"
+type RebaseResultType int
 
-func Rebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) error {
+const (
+	RebaseError RebaseResultType = iota
+	RebaseMergeConflict
+	RebaseSuccess
+)
+
+// The result of a Rebase operation.
+type RebaseResult struct {
+	// The type of result that occurred.
+	Type RebaseResultType
+	// The error returned by the operation, if any.
+	Error error
+}
+
+const successfulRebaseError = "IterOver"
+const mergeConflictError = "unstaged changes exist in workdir"
+
+func Rebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) RebaseResult {
 	toMoveAC := annotatedCommit(repo, *toMove)
 	parentAC := annotatedCommit(repo, parent)
 	ontoAC := annotatedCommit(repo, onto)
 
 	rebase, err := repo.InitRebase(toMoveAC, parentAC, ontoAC, rebaseOptions())
 	if err != nil {
-		return fmt.Errorf("Error initializing rebase: %s\n", err)
+		err = fmt.Errorf("Error initializing rebase: %s\n", err)
+		return RebaseResult{Type: RebaseError, Error: err}
 	}
 
 	// Perform each operation in the rebase. Breaks with an error when there
@@ -45,9 +63,13 @@ func Rebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch)
 		toMoveNew, _ := repo.LookupBranch(toMoveName, git.BranchLocal)
 		*toMove = toMoveNew
 
-		return nil
+		return RebaseResult{Type: RebaseSuccess}
+	} else if rebaseError.Error() == mergeConflictError {
+		return RebaseResult{Type: RebaseMergeConflict}
+	} else if rebaseError != nil {
+		return RebaseResult{Type: RebaseError, Error: rebaseError}
 	}
-	return rebaseError
+	return RebaseResult{Type: RebaseSuccess}
 }
 
 func annotatedCommit(repo *git.Repository, branch *git.Branch) *git.AnnotatedCommit {

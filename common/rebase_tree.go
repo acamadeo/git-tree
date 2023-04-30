@@ -123,16 +123,12 @@ func (r *rebaseTreeRunner) Execute() RebaseTreeResult {
 	destBranch := r.branchMap.FindBranch(destName)
 	sourceBranch := r.branchMap.FindBranch(sourceName)
 
-	err := r.executeRecurse(sourceParent, destBranch, sourceBranch)
-	if err != nil {
-		return RebaseTreeResult{Type: RebaseTreeError, Error: err}
-	}
+	// Defer cleanup tasks.
+	defer r.deleteTemporaryBranches()
 
-	// Delete temporary branches.
-	for tempBranch := range r.tempBranches {
-		if err := tempBranch.Delete(); err != nil {
-			return RebaseTreeResult{Type: RebaseTreeError, Error: err}
-		}
+	result := r.executeRecurse(sourceParent, destBranch, sourceBranch)
+	if result.Type != RebaseTreeSuccess {
+		return result
 	}
 
 	if err := r.updateAndWriteBranchMap(); err != nil {
@@ -142,7 +138,7 @@ func (r *rebaseTreeRunner) Execute() RebaseTreeResult {
 	return RebaseTreeResult{Type: RebaseTreeSuccess}
 }
 
-func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) error {
+func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) RebaseTreeResult {
 	// Create a temporary branch pointing to the same commit as `toMove`.
 	toMoveName, _ := toMove.Name()
 	tempName := UniqueBranchName(r.repo, "rebase-"+toMoveName)
@@ -153,24 +149,28 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) erro
 	r.tempBranches[tempBranch] = toMove
 
 	// Rebase branch `toMove` onto branch `onto`.
-	err := Rebase(r.repo, parent, onto, &toMove)
-	// Pause the rebase if we encountered a merge conflict.
-	if err != nil {
-		return err
+	rebaseResult := Rebase(r.repo, parent, onto, &toMove)
+
+	// Pause the rebase if we encountered a merge conflict or another type of
+	// error.
+	if rebaseResult.Type == RebaseMergeConflict {
+		return RebaseTreeResult{Type: RebaseTreeMergeConflict}
+	} else if rebaseResult.Type == RebaseError {
+		return RebaseTreeResult{Type: RebaseTreeError, Error: rebaseResult.Error}
 	}
 
 	// Otherwise, recurse into each child of `toMove` and move it onto the new
 	// location of `toMove`.
 	children := r.branchMap.FindChildren(toMoveName)
 	for _, child := range children {
-		err := r.executeRecurse(tempBranch, toMove, child)
+		result := r.executeRecurse(tempBranch, toMove, child)
 		// Abort early if the rebase failed for any of the children.
-		if err != nil {
-			return err
+		if result.Type != RebaseTreeSuccess {
+			return result
 		}
 	}
 
-	return nil
+	return RebaseTreeResult{Type: RebaseTreeSuccess}
 }
 
 func (r *rebaseTreeRunner) updateBranchMap() {
@@ -190,6 +190,12 @@ func (r *rebaseTreeRunner) updateBranchMap() {
 
 	// Remove `source` as a child of its parent.
 	r.branchMap.RemoveChildren(parentName, []string{sourceName})
+}
+
+func (r *rebaseTreeRunner) deleteTemporaryBranches() {
+	for tempBranch := range r.tempBranches {
+		tempBranch.Delete()
+	}
 }
 
 func (r *rebaseTreeRunner) updateAndWriteBranchMap() error {

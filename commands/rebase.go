@@ -72,10 +72,10 @@ func runRebase(context *Context, opts *rebaseOptions) error {
 
 	rebasingPath := common.RebasingPath(context.Repo.Path())
 
-	// If the repository is still in a Rebasing state, create a file to mark
-	// that a git-tree rebase is in progress.
-	if result.Type != common.RebaseTreeSuccess {
+	if result.Type == common.RebaseTreeMergeConflict {
+		// Create a file to indicate that a git-tree rebase is in progress.
 		os.OpenFile(rebasingPath, os.O_RDONLY|os.O_CREATE, 0666)
+		return errors.New("merge conflict encountered")
 	} else {
 		// Otherwise, delete the Rebasing state file, if it exists.
 		os.Remove(rebasingPath)
