@@ -9,6 +9,7 @@ import (
 	"github.com/abaresk/git-tree/models"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
+	"github.com/spf13/cobra"
 )
 
 // TODO: Handle special cases like:
@@ -18,15 +19,42 @@ import (
 //      * An invariant of git-tree is that branches only split at other
 //        branches.
 
-func newCmdInit() *Command {
-	return &Command{
-		Name:         "init",
-		Run:          runInit,
-		ValidateArgs: validateInitArgs,
-	}
+type initOptions struct {
+	branches []string
 }
 
-func runInit(context *Context, args []string) error {
+func NewInitCommand() *cobra.Command {
+	var opts initOptions
+
+	cmd := &cobra.Command{
+		Use:   "init",
+		Short: "Initializes git-tree for a repository",
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			context, err := createContext()
+			if err != nil {
+				return err
+			}
+
+			return validateInitArgs(context, &opts)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			context, err := createContext()
+			if err != nil {
+				return err
+			}
+
+			return runInit(context, &opts)
+		},
+	}
+
+	flags := cmd.Flags()
+
+	flags.StringArrayVarP(&opts.branches, "branches", "b", []string{}, "The branches to track with git-tree")
+
+	return cmd
+}
+
+func runInit(context *Context, opts *initOptions) error {
 	// NOTE: For now, let's make life easier and just store the branch map in
 	// our own file (not managed through git).
 	branchFile := common.BranchMapPath(context.Repo.Path())
@@ -34,11 +62,11 @@ func runInit(context *Context, args []string) error {
 	// If the branch map file already exists, then `git tree init` has already
 	// been run.
 	if _, err := os.Stat(branchFile); err == nil {
-		return errors.New("`git tree init` has already been run on this respository.")
+		return errors.New("`git-tree init` has already been run on this respository.")
 	}
 
 	// Extract the branches passed in via the arguments.
-	branches := branchesFromNames(context, args[1:])
+	branches := branchesFromNames(context, opts.branches)
 
 	// Create the root branch as the most-common ancestor of the provided
 	// branches.
@@ -55,21 +83,12 @@ func runInit(context *Context, args []string) error {
 	return nil
 }
 
-func validateInitArgs(context *Context, args []string) error {
-	if len(args) == 0 {
+func validateInitArgs(context *Context, opts *initOptions) error {
+	if len(opts.branches) == 0 {
 		return validateInitArgless(context)
 	}
 
-	if args[0] != "-b" {
-		return fmt.Errorf("List of branches should be preceded by %q.", "-b")
-	}
-
-	branchNames := args[1:]
-	if len(branchNames) == 0 {
-		return fmt.Errorf("-b should be followed by a list of branches.")
-	}
-
-	for _, branch := range branchNames {
+	for _, branch := range opts.branches {
 		if _, err := context.Repo.LookupBranch(branch, git.BranchLocal); err != nil {
 			return fmt.Errorf("Branch %q does not exist in the git repository.", branch)
 		}

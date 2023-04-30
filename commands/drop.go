@@ -6,16 +6,28 @@ import (
 
 	"github.com/abaresk/git-tree/common"
 	"github.com/abaresk/git-tree/store"
+	"github.com/spf13/cobra"
 )
 
-func newCmdDrop() *Command {
-	return &Command{
-		Name: "drop",
-		Run:  runDrop,
+func NewDropCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "drop",
+		Short: "Stops tracking the repository for git-tree",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			context, err := createContext()
+			if err != nil {
+				return err
+			}
+
+			return runDrop(context)
+		},
 	}
+
+	return cmd
 }
 
-func runDrop(context *Context, args []string) error {
+func runDrop(context *Context) error {
 	// If git-tree is not initalized, notify the user that running
 	// `git-tree drop` is a no-op.
 	if !common.GitTreeInited(context.Repo.Path()) {

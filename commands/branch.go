@@ -7,14 +7,33 @@ import (
 	"github.com/abaresk/git-tree/common"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
+	"github.com/spf13/cobra"
 )
 
-func newCmdBranch() *Command {
-	return &Command{
-		Name:         "branch",
-		Run:          runBranch,
-		ValidateArgs: validateBranchArgs,
+func NewBranchCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "branch",
+		Short: "Add a new branch at current commit",
+		Args:  cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			context, err := createContext()
+			if err != nil {
+				return err
+			}
+
+			return validateBranchArgs(context, args)
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			context, err := createContext()
+			if err != nil {
+				return err
+			}
+
+			return runBranch(context, args)
+		},
 	}
+
+	return cmd
 }
 
 // Add a new branch pointing to the current commit and checkout that branch.
@@ -55,10 +74,6 @@ func headCommit(repo *git.Repository) *git.Commit {
 func validateBranchArgs(context *Context, args []string) error {
 	if !common.GitTreeInited(context.Repo.Path()) {
 		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
-	}
-
-	if len(args) != 1 {
-		return errors.New("Command should be followed by a single branch name.")
 	}
 
 	if branch, _ := context.Repo.LookupBranch(args[0], git.BranchLocal); branch != nil {

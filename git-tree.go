@@ -1,43 +1,29 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/abaresk/git-tree/commands"
-	git "github.com/libgit2/git2go/v34"
+	"github.com/spf13/cobra"
 )
 
+var RootCmd = &cobra.Command{
+	Use:   "git-tree",
+	Short: "Manage trees of git branches",
+}
+
+var InitCmd = commands.NewInitCommand()
+var DropCmd = commands.NewDropCommand()
+var BranchCmd = commands.NewBranchCommand()
+var RebaseCmd = commands.NewRebaseCommand()
+
+func init() {
+	// Add all the commands.
+	RootCmd.AddCommand(InitCmd, DropCmd, BranchCmd, RebaseCmd)
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		// TODO: We should print usage()
-		printFatalf("No command was specified.\n")
+	if err := RootCmd.Execute(); err != nil {
+		os.Exit(1)
 	}
-
-	cwd, _ := os.Getwd()
-	context := createContext(cwd)
-
-	runError := commands.RunCommand(context, os.Args[1], os.Args[2:])
-	if runError != nil {
-		printFatalf(runError.Error())
-	}
-}
-
-func createContext(cwd string) *commands.Context {
-	repo, err := git.OpenRepository(cwd)
-	if err != nil {
-		printFatalf("Current directory %q is not a git repository.", cwd)
-	}
-
-	return &commands.Context{
-		Repo: repo,
-	}
-}
-
-func printFatalf(format string, a ...any) {
-	fmt.Print("ERROR: ")
-	fmt.Printf(format, a...)
-	fmt.Print("\n")
-
-	os.Exit(1)
 }
