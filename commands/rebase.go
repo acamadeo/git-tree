@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/abaresk/git-tree/common"
 	"github.com/abaresk/git-tree/operations"
@@ -55,9 +56,40 @@ func NewRebaseCommand() *cobra.Command {
 	return cmd
 }
 
-// CONSIDERATIONS:
-//  - Merge conflicts
-//     - Each commit being rebased could have merge conflicts (yuck)
+func validateRebaseArgs(context *Context, opts *rebaseOptions) error {
+	// TODO: Check that all branches being rebased are tracked by git-tree.
+	if !common.GitTreeInited(context.Repo.Path()) {
+		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
+	}
+
+	if opts.toAbort || opts.toContinue {
+		return validateAbortOrContinue(opts)
+	} else {
+		return validateRegularRebase(context.Repo, opts)
+	}
+}
+
+func validateAbortOrContinue(opts *rebaseOptions) error {
+	if opts.sourceName != "" || opts.destName != "" {
+		return errors.New("Command does not take --source or --dest arguments.")
+	}
+	return nil
+}
+
+func validateRegularRebase(repo *git.Repository, opts *rebaseOptions) error {
+	if opts.sourceName == "" || opts.destName == "" {
+		return errors.New("Command should be followed by valid `-s <source-branch> -d <dest-branch>`.")
+	}
+
+	rebaseArgs := parseRebaseArgs(repo, opts)
+	if rebaseArgs.source == nil {
+		return fmt.Errorf("Could not find source branch %q.", opts.sourceName)
+	}
+	if rebaseArgs.dest == nil {
+		return fmt.Errorf("Could not find dest branch %q.", opts.destName)
+	}
+	return nil
+}
 
 // Rebases a branch and all its descendants onto another branch.
 func runRebase(context *Context, opts *rebaseOptions) error {
@@ -78,17 +110,6 @@ func runRebase(context *Context, opts *rebaseOptions) error {
 		return errors.New("resolved files must be staged")
 	}
 	return result.Error
-}
-
-func validateRebaseArgs(context *Context, opts *rebaseOptions) error {
-	// QUESTION: Maybe consider not requiring `git-tree` to be init'ed. This
-	// would be a useful util even without the rest of `git-tree`.
-	//  - If we don't pursue that approach, we should enforce that the branches
-	//    being rebased are tracked by git-tree!
-	if !common.GitTreeInited(context.Repo.Path()) {
-		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
-	}
-	return nil
 }
 
 func parseRebaseArgs(repo *git.Repository, opts *rebaseOptions) rebaseArgs {

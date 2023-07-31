@@ -121,17 +121,6 @@ func validateRebaseTree(repo *git.Repository, source *git.Branch, dest *git.Bran
 		return errors.New("Cannot rebase while another rebase is in progress. Abort or continue the existing rebase")
 	}
 
-	// Must supply valid args.
-	if source == nil && dest == nil {
-		return errors.New("Command should be followed by `-s <source-branch> -d <dest-branch>`.")
-	}
-	if source == nil {
-		return errors.New("Command must be followed by a valid `-s <source-branch>`.")
-	}
-	if dest == nil {
-		return errors.New("Command must be followed by a valid `-d <dest-branch>`.")
-	}
-
 	// Source and destination cannot be the same.
 	if source.Cmp(dest.Reference) == 0 {
 		return errors.New("Source and destination cannot be the same")
