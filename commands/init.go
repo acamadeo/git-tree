@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/abaresk/git-tree/common"
+	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/models"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
@@ -112,7 +113,7 @@ func validateInitArgless(context *Context) error {
 func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
 	// If there were no branches passed in, initialize with all local branches.
 	if len(branchNames) == 0 {
-		return common.AllLocalBranches(context.Repo)
+		return gitutil.AllLocalBranches(context.Repo)
 	}
 
 	branches := []*git.Branch{}

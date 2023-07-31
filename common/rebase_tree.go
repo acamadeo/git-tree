@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/models"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
@@ -92,20 +93,20 @@ func RebaseTreeContinue(repo *git.Repository) RebaseTreeResult {
 
 func continueExistingRebase(repo *git.Repository) RebaseTreeResult {
 	// Open the existing rebase.
-	rebase, err := OpenRebase(repo)
+	rebase, err := gitutil.OpenRebase(repo)
 	if err != nil {
 		err := fmt.Errorf("Error opening rebase: %v", err)
 		return RebaseTreeResult{Type: RebaseTreeError, Error: err}
 	}
 
 	// Continue the existing rebase.
-	rebaseResult := ContinueRebase(repo, rebase)
+	rebaseResult := gitutil.ContinueRebase(repo, rebase)
 
-	if rebaseResult.Type == RebaseError {
+	if rebaseResult.Type == gitutil.RebaseError {
 		return RebaseTreeResult{Type: RebaseTreeError, Error: rebaseResult.Error}
-	} else if rebaseResult.Type == RebaseMergeConflict {
+	} else if rebaseResult.Type == gitutil.RebaseMergeConflict {
 		return RebaseTreeResult{Type: RebaseTreeMergeConflict}
-	} else if rebaseResult.Type == RebaseUnstagedChanges {
+	} else if rebaseResult.Type == gitutil.RebaseUnstagedChanges {
 		return RebaseTreeResult{Type: RebaseTreeUnstagedChanges}
 	} else {
 		return RebaseTreeResult{Type: RebaseTreeSuccess}
@@ -208,15 +209,15 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 		// gets interrupted (here or in a downstream branch).
 		tempBranch = r.createTempBranch(toMove)
 
-		rebaseResult := InitAndRunRebase(r.repo, parent, onto, &toMove)
+		rebaseResult := gitutil.InitAndRunRebase(r.repo, parent, onto, &toMove)
 
 		// Pause the rebase if we encountered an error.
-		if rebaseResult.Type == RebaseError {
+		if rebaseResult.Type == gitutil.RebaseError {
 			return RebaseTreeResult{Type: RebaseTreeError, Error: rebaseResult.Error}
 		}
 
 		// Bubble out of the rebase if we encountered a merge conflict.
-		if rebaseResult.Type == RebaseMergeConflict {
+		if rebaseResult.Type == gitutil.RebaseMergeConflict {
 			return RebaseTreeResult{Type: RebaseTreeMergeConflict}
 		}
 	}
@@ -259,8 +260,8 @@ func (r *rebaseTreeRunner) persistedTempBranch(branch *git.Branch) *git.Branch {
 func (r *rebaseTreeRunner) createTempBranch(branch *git.Branch) *git.Branch {
 	branchName, _ := branch.Name()
 
-	tempName := UniqueBranchName(r.repo, "rebase-"+branchName)
-	toMoveCommit := CommitByReference(r.repo, branch.Reference)
+	tempName := gitutil.UniqueBranchName(r.repo, "rebase-"+branchName)
+	toMoveCommit := gitutil.CommitByReference(r.repo, branch.Reference)
 	tempBranch, _ := r.repo.CreateBranch(tempName, toMoveCommit, false)
 
 	// Keep track of the temporary branch and which branch it is replacing.

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/abaresk/git-tree/common"
+	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 	"github.com/spf13/cobra"
@@ -68,7 +69,7 @@ func runBranch(context *Context, args []string) error {
 
 func headCommit(repo *git.Repository) *git.Commit {
 	headRef, _ := repo.Head()
-	return common.CommitByReference(repo, headRef)
+	return gitutil.CommitByReference(repo, headRef)
 }
 
 func validateBranchArgs(context *Context, args []string) error {
@@ -82,9 +83,9 @@ func validateBranchArgs(context *Context, args []string) error {
 
 	// Check if you are on a tip commit.
 	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
-	if !common.OnTipCommit(context.Repo, branchMap) {
+	if !gitutil.OnTipCommit(context.Repo, branchMap) {
 		headCommit, _ := context.Repo.Head()
-		return fmt.Errorf("HEAD commit %q is not pointed to by any tracked branches.", common.ReferenceShortHash(headCommit))
+		return fmt.Errorf("HEAD commit %q is not pointed to by any tracked branches.", gitutil.ReferenceShortHash(headCommit))
 	}
 
 	return nil

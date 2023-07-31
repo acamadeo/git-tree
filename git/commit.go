@@ -1,4 +1,4 @@
-package common
+package gitutil
 
 import (
 	"encoding/hex"
