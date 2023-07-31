@@ -100,7 +100,7 @@ func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **g
 	if rebaseResult.Type == RebaseSuccess {
 		// libgit2 does not update the target of `toMove` branch after rebase. Look
 		// up the branch again to get the updated target.
-		toMoveName, _ := (*toMove).Name()
+		toMoveName := BranchName(*toMove)
 		toMoveNew, _ := repo.LookupBranch(toMoveName, git.BranchLocal)
 		*toMove = toMoveNew
 	}

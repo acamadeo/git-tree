@@ -19,6 +19,11 @@ func AllLocalBranches(repo *git.Repository) []*git.Branch {
 	return output
 }
 
+func BranchName(branch *git.Branch) string {
+	name, _ := branch.Name()
+	return name
+}
+
 func UniqueBranchName(repo *git.Repository, name string) string {
 	for i := 0; i < 10000; i++ {
 		tryName := nameWithNumber(name, i)

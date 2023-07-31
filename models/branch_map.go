@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 
+	gitutil "github.com/abaresk/git-tree/git"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -132,12 +133,10 @@ func isAncestor(repo *git.Repository, a *git.Branch, b *git.Branch) bool {
 // Print a BranchMap (for debugging).
 func (b *BranchMap) String() string {
 	output := ""
-	rootName, _ := b.Root.Name()
-	output += fmt.Sprintf("Root: %s\n", rootName)
+	output += fmt.Sprintf("Root: %s\n", gitutil.BranchName(b.Root))
 
 	for parent, children := range b.Children {
-		parentName, _ := parent.Name()
-		output += fmt.Sprintf(" - %s: ", parentName)
+		output += fmt.Sprintf(" - %s: ", gitutil.BranchName(parent))
 
 		if len(children) == 0 {
 			output += "<empty>\n"
@@ -145,8 +144,7 @@ func (b *BranchMap) String() string {
 		}
 
 		for _, child := range children {
-			childName, _ := child.Name()
-			output += fmt.Sprintf("%s ", childName)
+			output += fmt.Sprintf("%s ", gitutil.BranchName(child))
 		}
 		output += "\n"
 	}
@@ -156,8 +154,7 @@ func (b *BranchMap) String() string {
 
 func (b *BranchMap) FindBranch(branchName string) *git.Branch {
 	for parent := range b.Children {
-		name, _ := parent.Name()
-		if name == branchName {
+		if branchName == gitutil.BranchName(parent) {
 			return parent
 		}
 	}
@@ -168,8 +165,7 @@ func (b *BranchMap) FindBranch(branchName string) *git.Branch {
 func (b *BranchMap) FindParent(branchName string) *git.Branch {
 	for parent, children := range b.Children {
 		for _, child := range children {
-			childName, _ := child.Name()
-			if childName == branchName {
+			if branchName == gitutil.BranchName(child) {
 				return parent
 			}
 		}
@@ -179,8 +175,7 @@ func (b *BranchMap) FindParent(branchName string) *git.Branch {
 
 func (b *BranchMap) FindChildren(branchName string) BranchList {
 	for parent, children := range b.Children {
-		name, _ := parent.Name()
-		if name == branchName {
+		if branchName == gitutil.BranchName(parent) {
 			return children
 		}
 	}
@@ -213,7 +208,7 @@ func (b *BranchMap) IsBranchAncestor(ancestor string, descendant string) bool {
 	// Recurse into each child to see if they are the parent of `descendant`.
 	ancestorChildren := b.Children[ancestorBranch]
 	for _, ancestorChild := range ancestorChildren {
-		childName, _ := ancestorChild.Branch().Name()
+		childName := gitutil.BranchName(ancestorChild.Branch())
 		if b.IsBranchAncestor(childName, descendant) {
 			return true
 		}
@@ -234,7 +229,7 @@ func (b *BranchMap) IsBranchParent(ancestor string, child string) bool {
 
 	ancestorChildren := b.Children[ancestorBranch]
 	for _, ancestorChild := range ancestorChildren {
-		name, _ := ancestorChild.Branch().Name()
+		name := gitutil.BranchName(ancestorChild.Branch())
 		if name == child {
 			return true
 		}

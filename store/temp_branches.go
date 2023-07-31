@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	gitutil "github.com/abaresk/git-tree/git"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -51,8 +52,8 @@ func string2TempBranchMap(repo *git.Repository, input []string) TempBranchMap {
 func tempBranchMap2String(tempMap TempBranchMap) string {
 	output := []string{}
 	for tempBranch, origBranch := range tempMap {
-		tempName, _ := tempBranch.Name()
-		origName, _ := origBranch.Name()
+		tempName := gitutil.BranchName(tempBranch)
+		origName := gitutil.BranchName(origBranch)
 
 		output = append(output, fmt.Sprintf("%s %s", tempName, origName))
 	}

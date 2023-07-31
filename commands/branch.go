@@ -50,7 +50,7 @@ func runBranch(context *Context, args []string) error {
 
 	// Add the new branch as a child of the head branch in the branch map.
 	headRef, _ := context.Repo.Head()
-	headName, _ := headRef.Branch().Name()
+	headName := gitutil.BranchName(headRef.Branch())
 
 	headBranch := branchMap.FindBranch(headName)
 	branchMap.Children[headBranch] = append(branchMap.Children[headBranch], newBranch)
@@ -83,7 +83,7 @@ func validateBranchArgs(context *Context, args []string) error {
 
 	// Check if you are on a tip commit.
 	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
-	if !gitutil.OnTipCommit(context.Repo, branchMap) {
+	if !common.OnTipCommit(context.Repo, branchMap) {
 		headCommit, _ := context.Repo.Head()
 		return fmt.Errorf("HEAD commit %q is not pointed to by any tracked branches.", gitutil.ReferenceShortHash(headCommit))
 	}

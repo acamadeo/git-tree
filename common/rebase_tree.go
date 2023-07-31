@@ -141,8 +141,8 @@ func validateRebaseTree(repo *git.Repository, source *git.Branch, dest *git.Bran
 	}
 
 	// Source cannot be an ancestor of destination.
-	sourceName, _ := source.Name()
-	destName, _ := dest.Name()
+	sourceName := gitutil.BranchName(source)
+	destName := gitutil.BranchName(dest)
 	if branchMap.IsBranchAncestor(sourceName, destName) {
 		return errors.New("Source cannot be an ancestor of destination")
 	}
@@ -178,8 +178,8 @@ func (r *rebaseTreeRunner) Execute() RebaseTreeResult {
 	//
 	// Maybe pass in recursively rebaseTreeImpl(parentBranch, branchToMove, branchToMoveOnto).
 
-	destName, _ := r.dest.Name()
-	sourceName, _ := r.source.Name()
+	destName := gitutil.BranchName(r.dest)
+	sourceName := gitutil.BranchName(r.source)
 
 	sourceParent := r.branchMap.FindParent(sourceName)
 	destBranch := r.branchMap.FindBranch(destName)
@@ -224,8 +224,7 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 
 	// Otherwise, recurse into each child of `toMove` and move it onto the new
 	// location of `toMove`.
-	toMoveName, _ := toMove.Name()
-	children := r.branchMap.FindChildren(toMoveName)
+	children := r.branchMap.FindChildren(gitutil.BranchName(toMove))
 	for _, child := range children {
 		result := r.executeRecurse(tempBranch, toMove, child)
 		// Abort early if the rebase failed for any of the children.
@@ -243,13 +242,10 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 // Persisted temporary branches are created when `git-tree rebase` has rebased
 // some branches but encountered a merge conflict.
 func (r *rebaseTreeRunner) persistedTempBranch(branch *git.Branch) *git.Branch {
-	branchName, _ := branch.Name()
-
 	// Branch map that was persisted in an interrupted `git-tree rebase` run.
 	branchMap := store.ReadTemporaryBranches(r.repo, RebasingTempsPath(r.repo.Path()))
 	for tempBranch, origBranch := range branchMap {
-		origBranchName, _ := origBranch.Name()
-		if origBranchName == branchName {
+		if gitutil.BranchName(origBranch) == gitutil.BranchName(branch) {
 			return tempBranch
 		}
 	}
@@ -258,7 +254,7 @@ func (r *rebaseTreeRunner) persistedTempBranch(branch *git.Branch) *git.Branch {
 
 // Create a temporary branch pointing to the same commit as `branch`.
 func (r *rebaseTreeRunner) createTempBranch(branch *git.Branch) *git.Branch {
-	branchName, _ := branch.Name()
+	branchName := gitutil.BranchName(branch)
 
 	tempName := gitutil.UniqueBranchName(r.repo, "rebase-"+branchName)
 	toMoveCommit := gitutil.CommitByReference(r.repo, branch.Reference)
@@ -275,13 +271,11 @@ func (r *rebaseTreeRunner) handleMergeConflict() {
 	os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666)
 
 	// Store the `source` and `dest` branches.
-	sourceName, _ := r.source.Name()
 	path = RebasingSourcePath(r.repo.Path())
-	store.OverwriteFile(path, sourceName)
+	store.OverwriteFile(path, gitutil.BranchName(r.source))
 
-	destName, _ := r.dest.Name()
 	path = RebasingDestPath(r.repo.Path())
-	store.OverwriteFile(path, destName)
+	store.OverwriteFile(path, gitutil.BranchName(r.dest))
 
 	// Store the temporary branches with pointers to each one's original branch.
 	path = RebasingTempsPath(r.repo.Path())
@@ -296,14 +290,14 @@ func (r *rebaseTreeRunner) handleSuccess() {
 
 func (r *rebaseTreeRunner) updateBranchMap() {
 	// Look up `source`, `dest`, and `parent` before making any changes.
-	sourceName, _ := r.source.Name()
+	sourceName := gitutil.BranchName(r.source)
 	source := r.branchMap.FindBranch(sourceName)
 
-	destName, _ := r.dest.Name()
+	destName := gitutil.BranchName(r.dest)
 	dest := r.branchMap.FindBranch(destName)
 
 	parent := r.branchMap.FindParent(sourceName)
-	parentName, _ := parent.Name()
+	parentName := gitutil.BranchName(parent)
 
 	// Move `source` under `dest`.
 	childrenMap := r.branchMap.Children

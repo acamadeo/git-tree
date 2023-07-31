@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/models"
 	git "github.com/libgit2/git2go/v34"
 	"golang.org/x/exp/maps"
@@ -42,8 +43,7 @@ func branchAndChildrenString(branchMap *models.BranchMap, branch string) string 
 
 	children := branchMap.FindChildren(branch)
 	for _, child := range children {
-		childBranchName, _ := child.Name()
-		names = append(names, childBranchName)
+		names = append(names, gitutil.BranchName(child))
 	}
 	return strings.Join(names, " ")
 }
@@ -63,7 +63,7 @@ func branchMap2StringRecurse(branchMap *models.BranchMap, branch string) []strin
 
 	// Add children in DFS order.
 	for _, child := range children {
-		childName, _ := child.Name()
+		childName := gitutil.BranchName(child)
 		output = append(output, branchMap2StringRecurse(branchMap, childName)...)
 	}
 	return output
@@ -71,7 +71,7 @@ func branchMap2StringRecurse(branchMap *models.BranchMap, branch string) []strin
 
 func branchMap2String(branchMap *models.BranchMap) string {
 	// First print the name of the root branch.
-	rootName, _ := branchMap.Root.Name()
+	rootName := gitutil.BranchName(branchMap.Root)
 	output := []string{rootName}
 
 	output = append(output, branchMap2StringRecurse(branchMap, rootName)...)
