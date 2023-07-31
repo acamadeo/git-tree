@@ -1,10 +1,11 @@
-package common
+package operations
 
 import (
 	"errors"
 	"fmt"
 	"os"
 
+	"github.com/abaresk/git-tree/common"
 	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/models"
 	"github.com/abaresk/git-tree/store"
@@ -48,7 +49,7 @@ type rebaseTreeRunner struct {
 // Under the hood, this is performed as a sequence of git rebase operations.
 func RebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch) RebaseTreeResult {
 	// Read the branch map file.
-	branchMap := store.ReadBranchMap(repo, BranchMapPath(repo.Path()))
+	branchMap := store.ReadBranchMap(repo, common.BranchMapPath(repo.Path()))
 
 	// Steps:
 	//  1. Validation:
@@ -78,13 +79,13 @@ func RebaseTreeContinue(repo *git.Repository) RebaseTreeResult {
 	}
 
 	// Read the branch map file.
-	branchMap := store.ReadBranchMap(repo, BranchMapPath(repo.Path()))
+	branchMap := store.ReadBranchMap(repo, common.BranchMapPath(repo.Path()))
 
 	// Look up source and dest branches.
-	sourceName := store.ReadFile(RebasingSourcePath(repo.Path()))
+	sourceName := store.ReadFile(common.RebasingSourcePath(repo.Path()))
 	source := branchMap.FindBranch(sourceName)
 
-	destName := store.ReadFile(RebasingDestPath(repo.Path()))
+	destName := store.ReadFile(common.RebasingDestPath(repo.Path()))
 	dest := branchMap.FindBranch(destName)
 
 	runner := newRebaseTreeRunner(repo, source, dest, branchMap)
@@ -120,7 +121,7 @@ func RebaseTreeAbort(repo *git.Repository) error {
 
 func validateRebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch, branchMap *models.BranchMap) error {
 	// Cannot run `git-tree rebase` if another rebase is in progress.
-	if store.FileExists(RebasingPath(repo.Path())) {
+	if store.FileExists(common.RebasingPath(repo.Path())) {
 		return errors.New("Cannot rebase while another rebase is in progress. Abort or continue the existing rebase")
 	}
 
@@ -243,7 +244,8 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 // some branches but encountered a merge conflict.
 func (r *rebaseTreeRunner) persistedTempBranch(branch *git.Branch) *git.Branch {
 	// Branch map that was persisted in an interrupted `git-tree rebase` run.
-	branchMap := store.ReadTemporaryBranches(r.repo, RebasingTempsPath(r.repo.Path()))
+	path := common.RebasingTempsPath(r.repo.Path())
+	branchMap := store.ReadTemporaryBranches(r.repo, path)
 	for tempBranch, origBranch := range branchMap {
 		if gitutil.BranchName(origBranch) == gitutil.BranchName(branch) {
 			return tempBranch
@@ -267,18 +269,18 @@ func (r *rebaseTreeRunner) createTempBranch(branch *git.Branch) *git.Branch {
 
 func (r *rebaseTreeRunner) handleMergeConflict() {
 	// Create a file indicating a rebase is in progress.
-	path := RebasingPath(r.repo.Path())
+	path := common.RebasingPath(r.repo.Path())
 	os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666)
 
 	// Store the `source` and `dest` branches.
-	path = RebasingSourcePath(r.repo.Path())
+	path = common.RebasingSourcePath(r.repo.Path())
 	store.OverwriteFile(path, gitutil.BranchName(r.source))
 
-	path = RebasingDestPath(r.repo.Path())
+	path = common.RebasingDestPath(r.repo.Path())
 	store.OverwriteFile(path, gitutil.BranchName(r.dest))
 
 	// Store the temporary branches with pointers to each one's original branch.
-	path = RebasingTempsPath(r.repo.Path())
+	path = common.RebasingTempsPath(r.repo.Path())
 	store.WriteTemporaryBranches(r.tempBranches, path)
 }
 
@@ -315,19 +317,19 @@ func (r *rebaseTreeRunner) deleteTemporaryBranches() {
 
 func (r *rebaseTreeRunner) deleteStorage() {
 	// Delete the file that indicates a rebase is in progress.
-	rebasingPath := RebasingPath(r.repo.Path())
+	rebasingPath := common.RebasingPath(r.repo.Path())
 	os.Remove(rebasingPath)
 
 	// Delete the file with the RebaseTree source.
-	rebasingSourcePath := RebasingSourcePath(r.repo.Path())
+	rebasingSourcePath := common.RebasingSourcePath(r.repo.Path())
 	os.Remove(rebasingSourcePath)
 
 	// Delete the file with the RebaseTree dest.
-	rebasingDestPath := RebasingDestPath(r.repo.Path())
+	rebasingDestPath := common.RebasingDestPath(r.repo.Path())
 	os.Remove(rebasingDestPath)
 
 	// Delete the file with the RebaseTree temporary branches.
-	rebasingTempsPath := RebasingTempsPath(r.repo.Path())
+	rebasingTempsPath := common.RebasingTempsPath(r.repo.Path())
 	os.Remove(rebasingTempsPath)
 }
 
@@ -335,7 +337,7 @@ func (r *rebaseTreeRunner) updateAndWriteBranchMap() error {
 	r.updateBranchMap()
 
 	// Rewrite the branch map file to disk.
-	branchFile := BranchMapPath(r.repo.Path())
+	branchFile := common.BranchMapPath(r.repo.Path())
 	store.WriteBranchMap(r.branchMap, branchFile)
 
 	return nil

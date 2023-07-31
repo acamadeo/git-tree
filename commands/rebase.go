@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/abaresk/git-tree/common"
+	"github.com/abaresk/git-tree/operations"
 	git "github.com/libgit2/git2go/v34"
 	"github.com/spf13/cobra"
 )
@@ -62,18 +63,18 @@ func NewRebaseCommand() *cobra.Command {
 func runRebase(context *Context, opts *rebaseOptions) error {
 	rebaseArgs := parseRebaseArgs(context.Repo, opts)
 
-	var result common.RebaseTreeResult
+	var result operations.RebaseTreeResult
 	if opts.toAbort {
-		common.RebaseTreeAbort(context.Repo)
+		operations.RebaseTreeAbort(context.Repo)
 	} else if opts.toContinue {
-		result = common.RebaseTreeContinue(context.Repo)
+		result = operations.RebaseTreeContinue(context.Repo)
 	} else {
-		result = common.RebaseTree(context.Repo, rebaseArgs.source, rebaseArgs.dest)
+		result = operations.RebaseTree(context.Repo, rebaseArgs.source, rebaseArgs.dest)
 	}
 
-	if result.Type == common.RebaseTreeMergeConflict {
+	if result.Type == operations.RebaseTreeMergeConflict {
 		return errors.New("merge conflict encountered")
-	} else if result.Type == common.RebaseTreeUnstagedChanges {
+	} else if result.Type == operations.RebaseTreeUnstagedChanges {
 		return errors.New("resolved files must be staged")
 	}
 	return result.Error
