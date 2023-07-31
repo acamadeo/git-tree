@@ -2,41 +2,59 @@ package common
 
 import "path/filepath"
 
+type GitTreeFile int
+
+const (
+	BranchMap GitTreeFile = iota
+	ObsoleteMap
+	RebaseInProgress
+	RebaseSource
+	RebaseDest
+	RebaseTemporaryBranches
+)
+
+var gitTreeFileNames = map[GitTreeFile]string{
+	BranchMap:               "branches",
+	ObsoleteMap:             "obsmap",
+	RebaseInProgress:        "rebasing",
+	RebaseSource:            "rebasing-source",
+	RebaseDest:              "rebasing-dest",
+	RebaseTemporaryBranches: "rebasing-temps",
+}
+
 const GitTreeRootBranch = "git-tree-root"
 
 const GitTreeSubdir = "tree"
-const GitTreeBranchMap = "tree/branches"
-const GitTreeObsMap = "tree/obsmap"
 
-const GitTreeRebasing = "tree/rebasing"
-const GitTreeRebasingSource = "tree/rebasing-source"
-const GitTreeRebasingDest = "tree/rebasing-dest"
-const GitTreeRebasingTemps = "tree/rebasing-temps"
+func GitTreeFilePath(gitPath string, fileType GitTreeFile) string {
+	fileName := gitTreeFileNames[fileType]
+	return filepath.Join(gitPath, GitTreeSubdir, fileName)
+}
+
+// -------------------------------------------------------------------------- \
+// Ease-of-use functions                                                      |
+// -------------------------------------------------------------------------- /
 
 func GitTreeSubdirPath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeSubdir)
+	return filepath.Join(gitPath, GitTreeSubdir)
 }
 
 func BranchMapPath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeBranchMap)
+	return GitTreeFilePath(gitPath, BranchMap)
 }
 
 func RebasingPath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeRebasing)
+	return GitTreeFilePath(gitPath, RebaseInProgress)
 }
 
 func RebasingSourcePath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeRebasingSource)
+	return GitTreeFilePath(gitPath, RebaseSource)
 }
 
 func RebasingDestPath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeRebasingDest)
+	return GitTreeFilePath(gitPath, RebaseDest)
 }
 
 func RebasingTempsPath(gitPath string) string {
-	return GitTreeFilePath(gitPath, GitTreeRebasingTemps)
-}
-
-func GitTreeFilePath(gitPath string, filename string) string {
-	return filepath.Join(gitPath, filename)
+	return GitTreeFilePath(gitPath, RebaseTemporaryBranches)
 }
