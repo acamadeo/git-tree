@@ -38,6 +38,10 @@ type rebaseTreeRunner struct {
 	tempBranches map[*git.Branch]*git.Branch
 }
 
+// -------------------------------------------------------------------------- \
+// RebaseTree                                                                 |
+// -------------------------------------------------------------------------- /
+
 // QUESTIONS:
 //  1. How does git natively store that a repo is in `rebasing` mode?
 //      - We may want to mirror this for git-tree.
@@ -70,6 +74,10 @@ func RebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch) Reba
 	runner := newRebaseTreeRunner(repo, source, dest, branchMap)
 	return runner.Execute()
 }
+
+// -------------------------------------------------------------------------- \
+// RebaseTreeContinue                                                         |
+// -------------------------------------------------------------------------- /
 
 func RebaseTreeContinue(repo *git.Repository) RebaseTreeResult {
 	// Try finishing the in-progress rebase.
@@ -113,6 +121,10 @@ func continueExistingRebase(repo *git.Repository) RebaseTreeResult {
 		return RebaseTreeResult{Type: RebaseTreeSuccess}
 	}
 }
+
+// -------------------------------------------------------------------------- \
+// RebaseTreeAbort                                                            |
+// -------------------------------------------------------------------------- /
 
 // TODO: Implement this!
 func RebaseTreeAbort(repo *git.Repository) error {
