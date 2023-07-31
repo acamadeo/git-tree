@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/abaresk/git-tree/common"
 	"github.com/abaresk/git-tree/models"
@@ -61,7 +60,7 @@ func runInit(context *Context, opts *initOptions) error {
 
 	// If the branch map file already exists, then `git tree init` has already
 	// been run.
-	if _, err := os.Stat(branchFile); err == nil {
+	if common.GitTreeInited(context.Repo.Path()) {
 		return errors.New("`git-tree init` has already been run on this respository.")
 	}
 

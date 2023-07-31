@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -8,7 +9,7 @@ import (
 // Replaces the contents of file `filename` with `contents`.
 //
 // Creates file `filename` if it did not exist before.
-func overwriteFile(filename string, contents string) {
+func OverwriteFile(filename string, contents string) {
 	// Make the file's parent directory (no-op if directory already exists).
 	dir := filepath.Dir(filename)
 	os.MkdirAll(dir, os.ModePerm)
@@ -22,4 +23,16 @@ func overwriteFile(filename string, contents string) {
 	newFile, _ := os.Create(filename)
 	newFile.WriteString(contents)
 	newFile.Close()
+}
+
+// Return contents of a file as a string.
+func ReadFile(filename string) string {
+	bytes, _ := ioutil.ReadFile(filename)
+	return string(bytes)
+}
+
+// Returns true if the file exists.
+func FileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }

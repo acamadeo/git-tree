@@ -15,7 +15,7 @@ func ReadObsolescenceMap(filepath string) *models.ObsolescenceMap {
 
 // Write obsolescence map file
 func WriteObsolescenceMap(obsmap *models.ObsolescenceMap, filepath string) {
-	overwriteFile(filepath, obsolescenceMapString(obsmap))
+	OverwriteFile(filepath, obsolescenceMapString(obsmap))
 }
 
 func obsolescenceMapString(obsmap *models.ObsolescenceMap) string {

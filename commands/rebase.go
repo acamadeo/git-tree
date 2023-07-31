@@ -2,10 +2,8 @@ package commands
 
 import (
 	"errors"
-	"os"
 
 	"github.com/abaresk/git-tree/common"
-	"github.com/abaresk/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 	"github.com/spf13/cobra"
 )
@@ -64,23 +62,20 @@ func NewRebaseCommand() *cobra.Command {
 func runRebase(context *Context, opts *rebaseOptions) error {
 	rebaseArgs := parseRebaseArgs(context.Repo, opts)
 
-	// Read the branch map file.
-	branchMapPath := common.BranchMapPath(context.Repo.Path())
-	branchMap := store.ReadBranchMap(context.Repo, branchMapPath)
-
-	result := common.RebaseTree(context.Repo, rebaseArgs.source, rebaseArgs.dest, branchMap)
-
-	rebasingPath := common.RebasingPath(context.Repo.Path())
-
-	if result.Type == common.RebaseTreeMergeConflict {
-		// Create a file to indicate that a git-tree rebase is in progress.
-		os.OpenFile(rebasingPath, os.O_RDONLY|os.O_CREATE, 0666)
-		return errors.New("merge conflict encountered")
+	var result common.RebaseTreeResult
+	if opts.toAbort {
+		common.RebaseTreeAbort(context.Repo)
+	} else if opts.toContinue {
+		result = common.RebaseTreeContinue(context.Repo)
 	} else {
-		// Otherwise, delete the Rebasing state file, if it exists.
-		os.Remove(rebasingPath)
+		result = common.RebaseTree(context.Repo, rebaseArgs.source, rebaseArgs.dest)
 	}
 
+	if result.Type == common.RebaseTreeMergeConflict {
+		return errors.New("merge conflict encountered")
+	} else if result.Type == common.RebaseTreeUnstagedChanges {
+		return errors.New("resolved files must be staged")
+	}
 	return result.Error
 }
 
@@ -91,17 +86,6 @@ func validateRebaseArgs(context *Context, opts *rebaseOptions) error {
 	//    being rebased are tracked by git-tree!
 	if !common.GitTreeInited(context.Repo.Path()) {
 		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
-	}
-
-	rebaseArgs := parseRebaseArgs(context.Repo, opts)
-	if rebaseArgs.source == nil && rebaseArgs.dest == nil {
-		return errors.New("Command should be followed by `-s <source-branch> -d <dest-branch>`.")
-	}
-	if rebaseArgs.source == nil {
-		return errors.New("Command must be followed by a valid `-s <source-branch>`.")
-	}
-	if rebaseArgs.dest == nil {
-		return errors.New("Command must be followed by a valid `-d <dest-branch>`.")
 	}
 	return nil
 }

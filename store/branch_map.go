@@ -30,7 +30,7 @@ func ReadBranchMap(repo *git.Repository, filepath string) *models.BranchMap {
 
 // Write branch map file.
 func WriteBranchMap(branchMap *models.BranchMap, filepath string) {
-	overwriteFile(filepath, branchMap2String(branchMap))
+	OverwriteFile(filepath, branchMap2String(branchMap))
 }
 
 /**
