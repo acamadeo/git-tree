@@ -42,30 +42,12 @@ type rebaseTreeRunner struct {
 // RebaseTree                                                                 |
 // -------------------------------------------------------------------------- /
 
-// QUESTIONS:
-//  1. How does git natively store that a repo is in `rebasing` mode?
-//      - We may want to mirror this for git-tree.
-//      - We'll need to persist the temporary branches if `git-tree` enters
-//        `rebasing` mode.
-
 // Rebase a branch and all its descendants onto another branch.
 //
 // Under the hood, this is performed as a sequence of git rebase operations.
 func RebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch) RebaseTreeResult {
 	// Read the branch map file.
 	branchMap := store.ReadBranchMap(repo, common.BranchMapPath(repo.Path()))
-
-	// Steps:
-	//  1. Validation:
-	//      - source and destination cannot be the same
-	//      - source cannot be an ancestor of destination
-	//      * Might not specifically need validation but if `source` is already
-	//        on `dest`, it's not an error but it should be a no-op.
-	//  1. Perform the rebases in the sequence.
-	//      - If it's a clean rebase (no merge conflicts). Perform the rebases
-	//        as listed and then clean up (delete temporary branches).
-	//      - If there's a merge conflict, set the repository into a git-tree
-	//        `rebasing` state and return RebaseTreeMergeConflict.
 
 	if err := validateRebaseTree(repo, source, dest, branchMap); err != nil {
 		return RebaseTreeResult{Type: RebaseTreeError, Error: err}
@@ -131,6 +113,8 @@ func RebaseTreeAbort(repo *git.Repository) error {
 	return nil
 }
 
+// validateRebaseTree checks whether the RebaseTree operation is valid,
+// returning an error if it is not.
 func validateRebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch, branchMap *models.BranchMap) error {
 	// Cannot run `git-tree rebase` if another rebase is in progress.
 	if store.FileExists(common.RebasingPath(repo.Path())) {
