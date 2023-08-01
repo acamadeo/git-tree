@@ -97,7 +97,7 @@ func runRebase(context *Context, opts *rebaseOptions) error {
 
 	var result operations.RebaseTreeResult
 	if opts.toAbort {
-		operations.RebaseTreeAbort(context.Repo)
+		result = operations.RebaseTreeAbort(context.Repo)
 	} else if opts.toContinue {
 		result = operations.RebaseTreeContinue(context.Repo)
 	} else {

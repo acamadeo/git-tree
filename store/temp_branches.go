@@ -7,17 +7,14 @@ import (
 	"strings"
 
 	gitutil "github.com/abaresk/git-tree/git"
+	"github.com/abaresk/git-tree/models"
 	git "github.com/libgit2/git2go/v34"
 )
-
-// A map from each temporary branch (used in RebaseTree) to the branch it
-// replaced.
-type TempBranchMap map[*git.Branch]*git.Branch
 
 // Read temporary branches file.
 //
 // It is expected that the file exists.
-func ReadTemporaryBranches(repo *git.Repository, filepath string) TempBranchMap {
+func ReadTemporaryBranches(repo *git.Repository, filepath string) models.TempBranchMap {
 	readFile, _ := os.Open(filepath)
 	defer readFile.Close()
 
@@ -33,12 +30,12 @@ func ReadTemporaryBranches(repo *git.Repository, filepath string) TempBranchMap 
 }
 
 // Write temporary branches file.
-func WriteTemporaryBranches(tempMap TempBranchMap, filepath string) {
+func WriteTemporaryBranches(tempMap models.TempBranchMap, filepath string) {
 	OverwriteFile(filepath, tempBranchMap2String(tempMap))
 }
 
-func string2TempBranchMap(repo *git.Repository, input []string) TempBranchMap {
-	output := TempBranchMap{}
+func string2TempBranchMap(repo *git.Repository, input []string) models.TempBranchMap {
+	output := models.TempBranchMap{}
 	for _, line := range input {
 		parts := strings.Fields(line)
 		tempBranch, _ := repo.LookupBranch(parts[0], git.BranchLocal)
@@ -49,7 +46,7 @@ func string2TempBranchMap(repo *git.Repository, input []string) TempBranchMap {
 	return output
 }
 
-func tempBranchMap2String(tempMap TempBranchMap) string {
+func tempBranchMap2String(tempMap models.TempBranchMap) string {
 	output := []string{}
 	for tempBranch, origBranch := range tempMap {
 		tempName := gitutil.BranchName(tempBranch)

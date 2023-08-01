@@ -35,7 +35,7 @@ type rebaseTreeRunner struct {
 	dest      *git.Branch
 	branchMap *models.BranchMap
 	// A map from the temporary branch to the branch it replaced.
-	tempBranches map[*git.Branch]*git.Branch
+	tempBranches models.TempBranchMap
 }
 
 // -------------------------------------------------------------------------- \
@@ -108,9 +108,31 @@ func continueExistingRebase(repo *git.Repository) RebaseTreeResult {
 // RebaseTreeAbort                                                            |
 // -------------------------------------------------------------------------- /
 
-// TODO: Implement this!
-func RebaseTreeAbort(repo *git.Repository) error {
-	return nil
+// Abort a RebaseTree operation in progress.
+func RebaseTreeAbort(repo *git.Repository) RebaseTreeResult {
+	rebase, err := gitutil.OpenRebase(repo)
+	if err != nil {
+		err := fmt.Errorf("Error opening rebase: %v", err)
+		return RebaseTreeResult{Type: RebaseTreeError, Error: err}
+	}
+
+	if err := rebase.Abort(); err != nil {
+		err := fmt.Errorf("Error aborting rebase: %v", err)
+		return RebaseTreeResult{Type: RebaseTreeError, Error: err}
+	}
+
+	// Read temporary branches.
+	path := common.RebasingTempsPath(repo.Path())
+	tempBranchMap := store.ReadTemporaryBranches(repo, path)
+
+	// Move rebased branches back to their original positions.
+	restoreRebasedBranches(tempBranchMap)
+
+	// Delete temporary branches and storage files.
+	deleteTemporaryBranches(tempBranchMap)
+	deleteStorage(repo)
+
+	return RebaseTreeResult{Type: RebaseTreeSuccess}
 }
 
 // validateRebaseTree checks whether the RebaseTree operation is valid,
@@ -147,7 +169,7 @@ func newRebaseTreeRunner(repo *git.Repository, source *git.Branch, dest *git.Bra
 		source:       source,
 		dest:         dest,
 		branchMap:    branchMap,
-		tempBranches: map[*git.Branch]*git.Branch{},
+		tempBranches: models.TempBranchMap{},
 	}
 }
 
@@ -230,8 +252,8 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 func (r *rebaseTreeRunner) persistedTempBranch(branch *git.Branch) *git.Branch {
 	// Branch map that was persisted in an interrupted `git-tree rebase` run.
 	path := common.RebasingTempsPath(r.repo.Path())
-	branchMap := store.ReadTemporaryBranches(r.repo, path)
-	for tempBranch, origBranch := range branchMap {
+	tempBranchMap := store.ReadTemporaryBranches(r.repo, path)
+	for tempBranch, origBranch := range tempBranchMap {
 		if gitutil.BranchName(origBranch) == gitutil.BranchName(branch) {
 			return tempBranch
 		}
@@ -270,9 +292,9 @@ func (r *rebaseTreeRunner) handleMergeConflict() {
 }
 
 func (r *rebaseTreeRunner) handleSuccess() {
-	r.deleteTemporaryBranches()
+	deleteTemporaryBranches(r.tempBranches)
+	deleteStorage(r.repo)
 	r.updateAndWriteBranchMap()
-	r.deleteStorage()
 }
 
 func (r *rebaseTreeRunner) updateBranchMap() {
@@ -294,30 +316,6 @@ func (r *rebaseTreeRunner) updateBranchMap() {
 	r.branchMap.RemoveChildren(parentName, []string{sourceName})
 }
 
-func (r *rebaseTreeRunner) deleteTemporaryBranches() {
-	for tempBranch := range r.tempBranches {
-		tempBranch.Delete()
-	}
-}
-
-func (r *rebaseTreeRunner) deleteStorage() {
-	// Delete the file that indicates a rebase is in progress.
-	rebasingPath := common.RebasingPath(r.repo.Path())
-	os.Remove(rebasingPath)
-
-	// Delete the file with the RebaseTree source.
-	rebasingSourcePath := common.RebasingSourcePath(r.repo.Path())
-	os.Remove(rebasingSourcePath)
-
-	// Delete the file with the RebaseTree dest.
-	rebasingDestPath := common.RebasingDestPath(r.repo.Path())
-	os.Remove(rebasingDestPath)
-
-	// Delete the file with the RebaseTree temporary branches.
-	rebasingTempsPath := common.RebasingTempsPath(r.repo.Path())
-	os.Remove(rebasingTempsPath)
-}
-
 func (r *rebaseTreeRunner) updateAndWriteBranchMap() error {
 	r.updateBranchMap()
 
@@ -326,4 +324,38 @@ func (r *rebaseTreeRunner) updateAndWriteBranchMap() error {
 	store.WriteBranchMap(r.branchMap, branchFile)
 
 	return nil
+}
+
+// Restore branches that have already been rebased back to their original
+// positions, using the temporary branches map.
+func restoreRebasedBranches(tempBranches models.TempBranchMap) {
+	for tempBranch, origBranch := range tempBranches {
+		// Move `origBranch` to point back to `tempBranch`.
+		tempBranchOid := tempBranch.Reference.Target()
+		origBranch.Branch().SetTarget(tempBranchOid, "aborting RebaseTree")
+	}
+}
+
+func deleteTemporaryBranches(tempBranches models.TempBranchMap) {
+	for tempBranch := range tempBranches {
+		tempBranch.Delete()
+	}
+}
+
+func deleteStorage(repo *git.Repository) {
+	// Delete the file that indicates a rebase is in progress.
+	rebasingPath := common.RebasingPath(repo.Path())
+	os.Remove(rebasingPath)
+
+	// Delete the file with the RebaseTree source.
+	rebasingSourcePath := common.RebasingSourcePath(repo.Path())
+	os.Remove(rebasingSourcePath)
+
+	// Delete the file with the RebaseTree dest.
+	rebasingDestPath := common.RebasingDestPath(repo.Path())
+	os.Remove(rebasingDestPath)
+
+	// Delete the file with the RebaseTree temporary branches.
+	rebasingTempsPath := common.RebasingTempsPath(repo.Path())
+	os.Remove(rebasingTempsPath)
 }
