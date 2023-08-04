@@ -35,3 +35,9 @@ func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return err == nil
 }
+
+// Returns true if the directory exists.
+func DirExists(dir string) bool {
+	_, err := os.Stat(dir)
+	return err == nil
+}
