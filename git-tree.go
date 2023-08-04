@@ -3,7 +3,10 @@ package main
 import (
 	"os"
 
-	"github.com/abaresk/git-tree/commands"
+	branchCmd "github.com/abaresk/git-tree/commands/branch"
+	dropCmd "github.com/abaresk/git-tree/commands/drop"
+	initCmd "github.com/abaresk/git-tree/commands/init"
+	rebaseCmd "github.com/abaresk/git-tree/commands/rebase"
 	"github.com/spf13/cobra"
 )
 
@@ -12,10 +15,10 @@ var RootCmd = &cobra.Command{
 	Short: "Manage trees of dependent git branches",
 }
 
-var InitCmd = commands.NewInitCommand()
-var DropCmd = commands.NewDropCommand()
-var BranchCmd = commands.NewBranchCommand()
-var RebaseCmd = commands.NewRebaseCommand()
+var InitCmd = initCmd.NewInitCommand()
+var DropCmd = dropCmd.NewDropCommand()
+var BranchCmd = branchCmd.NewBranchCommand()
+var RebaseCmd = rebaseCmd.NewRebaseCommand()
 
 func init() {
 	// Add all the commands.

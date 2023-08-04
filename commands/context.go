@@ -11,7 +11,7 @@ type Context struct {
 	Repo *git.Repository
 }
 
-func createContext() (*Context, error) {
+func CreateContext() (*Context, error) {
 	cwd, _ := os.Getwd()
 	repo, err := git.OpenRepository(cwd)
 	if err != nil {

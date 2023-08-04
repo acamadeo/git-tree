@@ -1,9 +1,10 @@
-package commands
+package init
 
 import (
 	"errors"
 	"fmt"
 
+	"github.com/abaresk/git-tree/commands"
 	"github.com/abaresk/git-tree/common"
 	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/models"
@@ -30,7 +31,7 @@ func NewInitCommand() *cobra.Command {
 		Use:   "init",
 		Short: "Initializes git-tree for a repository",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			context, err := createContext()
+			context, err := commands.CreateContext()
 			if err != nil {
 				return err
 			}
@@ -38,7 +39,7 @@ func NewInitCommand() *cobra.Command {
 			return validateInitArgs(context, &opts)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			context, err := createContext()
+			context, err := commands.CreateContext()
 			if err != nil {
 				return err
 			}
@@ -54,7 +55,7 @@ func NewInitCommand() *cobra.Command {
 	return cmd
 }
 
-func runInit(context *Context, opts *initOptions) error {
+func runInit(context *commands.Context, opts *initOptions) error {
 	// NOTE: For now, let's make life easier and just store the branch map in
 	// our own file (not managed through git).
 	branchFile := common.BranchMapPath(context.Repo.Path())
@@ -83,7 +84,7 @@ func runInit(context *Context, opts *initOptions) error {
 	return nil
 }
 
-func validateInitArgs(context *Context, opts *initOptions) error {
+func validateInitArgs(context *commands.Context, opts *initOptions) error {
 	if len(opts.branches) == 0 {
 		return validateInitArgless(context)
 	}
@@ -97,7 +98,7 @@ func validateInitArgs(context *Context, opts *initOptions) error {
 	return nil
 }
 
-func validateInitArgless(context *Context) error {
+func validateInitArgless(context *commands.Context) error {
 	head, err := context.Repo.Head()
 	if err != nil {
 		return fmt.Errorf("Cannot find HEAD reference.")
@@ -110,7 +111,7 @@ func validateInitArgless(context *Context) error {
 	return nil
 }
 
-func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
+func branchesFromNames(context *commands.Context, branchNames []string) []*git.Branch {
 	// If there were no branches passed in, initialize with all local branches.
 	if len(branchNames) == 0 {
 		return gitutil.AllLocalBranches(context.Repo)
