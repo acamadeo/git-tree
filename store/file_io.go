@@ -1,7 +1,6 @@
 package store
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -27,7 +26,7 @@ func OverwriteFile(filename string, contents string) {
 
 // Return contents of a file as a string.
 func ReadFile(filename string) string {
-	bytes, _ := ioutil.ReadFile(filename)
+	bytes, _ := os.ReadFile(filename)
 	return string(bytes)
 }
 
