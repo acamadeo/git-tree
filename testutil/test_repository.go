@@ -53,6 +53,13 @@ func (t *TestRepository) LookupBranch(name string) *git.Branch {
 	return branch
 }
 
+// Returns true if branch `a` is an ancestor of branch `b`.
+func (t *TestRepository) IsBranchAncestor(a string, b string) bool {
+	branchA := t.LookupBranch(a)
+	branchB := t.LookupBranch(b)
+	return gitutil.IsBranchAncestor(t.Repo, branchA, branchB)
+}
+
 // Write to `contents` to file `filename` under the working directory.
 //
 // This overwrites the contents of the file if the file already exists.
@@ -100,6 +107,18 @@ func (t *TestRepository) WriteAndCommitFile(filename string, contents string, me
 	t.WriteFile(filename, contents)
 	t.StageFiles()
 	t.WriteCommit(message)
+}
+
+// Moved HEAD to the commit with message `message`. Assumes a single commit with
+// the specified message exists.
+func (t *TestRepository) SwitchCommit(message string) {
+	allCommits := gitutil.AllLocalCommits(t.Repo)
+	for _, commit := range allCommits {
+		if commit.Message() == message {
+			gitutil.CheckoutCommit(t.Repo, commit)
+			break
+		}
+	}
 }
 
 // Creates a new branch off HEAD, adding and committing a file to the new branch.

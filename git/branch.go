@@ -24,6 +24,25 @@ func BranchName(branch *git.Branch) string {
 	return name
 }
 
+// Returns true if branch `a` is an ancestor of branch `b`.
+func IsBranchAncestor(repo *git.Repository, a *git.Branch, b *git.Branch) bool {
+	commitOidA := a.Target()
+
+	revWalk, _ := repo.Walk()
+	revWalk.Push(b.Target())
+
+	found := false
+	revWalk.Iterate(func(commit *git.Commit) bool {
+		if *commit.Id() == *commitOidA {
+			found = true
+			return false
+		}
+		return true
+	})
+
+	return found
+}
+
 func UniqueBranchName(repo *git.Repository, name string) string {
 	for i := 0; i < 10000; i++ {
 		tryName := nameWithNumber(name, i)

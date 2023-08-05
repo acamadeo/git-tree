@@ -41,7 +41,7 @@ func TestInit_BranchDoesNotExist_RepoWithBranches(t *testing.T) {
 
 	wantError := errors.New("Branch \"mudkip\" does not exist in the git repository.")
 	if gotError.Error() != wantError.Error() {
-		t.Errorf("Init command got error %v, but want error %v", gotError, wantError)
+		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestInit_BranchDoesNotExist_RepoBranchless(t *testing.T) {
 
 	wantError := errors.New("Branch \"mudkip\" does not exist in the git repository.")
 	if gotError.Error() != wantError.Error() {
-		t.Errorf("Init command got error %v, but want error %v", gotError, wantError)
+		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
 	}
 }
 

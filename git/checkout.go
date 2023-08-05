@@ -30,6 +30,14 @@ func CheckoutBranchByName(repo *git.Repository, branchName string) error {
 	return CheckoutBranch(repo, branch)
 }
 
+func CheckoutCommit(repo *git.Repository, commit *git.Commit) error {
+	// Set HEAD to the given commit.
+	if err := repo.SetHeadDetached(commit.Id()); err != nil {
+		return fmt.Errorf("Could not checkout commit %q in detached HEAD mode", CommitShortHash(commit))
+	}
+	return nil
+}
+
 func checkoutOpts() *git.CheckoutOptions {
 	return &git.CheckoutOptions{
 		Strategy: git.CheckoutSafe,
