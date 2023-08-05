@@ -13,11 +13,7 @@ func CommitByReference(repo *git.Repository, ref *git.Reference) *git.Commit {
 
 func AllLocalCommits(repo *git.Repository) []*git.Commit {
 	// Create a walk that will include the tip commit of every local branch.
-	revWalk, _ := repo.Walk()
-	for _, branch := range AllLocalBranches(repo) {
-		tipCommitOid := branch.Reference.Target()
-		revWalk.Push(tipCommitOid)
-	}
+	revWalk := InitWalkWithAllBranches(repo)
 
 	// Perform the walk, creating a set of every commit oid.
 	commitOidsSet := map[git.Oid]bool{}

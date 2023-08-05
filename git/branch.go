@@ -29,6 +29,7 @@ func IsBranchAncestor(repo *git.Repository, a *git.Branch, b *git.Branch) bool {
 	commitOidA := a.Target()
 
 	revWalk, _ := repo.Walk()
+	revWalk.Sorting(git.SortTopological)
 	revWalk.Push(b.Target())
 
 	found := false
