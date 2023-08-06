@@ -48,6 +48,12 @@ func (t *TestRepository) SwitchBranch(name string) {
 	gitutil.CheckoutBranchByName(t.Repo, name)
 }
 
+// Create a branch off current HEAD and switch to the new branch.
+func (t *TestRepository) CreateAndSwitchBranch(name string) {
+	t.CreateBranch(name)
+	t.SwitchBranch(name)
+}
+
 func (t *TestRepository) LookupBranch(name string) *git.Branch {
 	branch, _ := t.Repo.LookupBranch(name, git.BranchLocal)
 	return branch

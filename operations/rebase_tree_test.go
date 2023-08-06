@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"errors"
 	"testing"
 
 	gitutil "github.com/abaresk/git-tree/git"
@@ -10,6 +11,77 @@ import (
 // -------------------------------------------------------------------------- \
 // RebaseTree                                                                 |
 // -------------------------------------------------------------------------- /
+
+// Initial:
+//
+//	master ─── mew
+func TestRebaseTree_SourceAndDestCannotBeTheSame(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial
+	env.repo.BranchWithCommit("mew")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("mew")
+	dest := env.repo.LookupBranch("mew")
+	gotResult := RebaseTree(env.repo.Repo, source, dest)
+
+	wantError := errors.New("Source and destination cannot be the same")
+
+	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
+		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
+	}
+}
+
+// Initial:
+//
+//	master ─── treecko ─── grovyle
+func TestRebaseTree_SourceCannotBeAncestorOfDest(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial
+	env.repo.BranchWithCommit("treecko")
+	env.repo.BranchWithCommit("grovyle")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("grovyle")
+	gotResult := RebaseTree(env.repo.Repo, source, dest)
+
+	wantError := errors.New("Source cannot be an ancestor of destination")
+
+	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
+		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
+	}
+}
+
+// Initial:
+//
+//	master ─── treecko ─── grovyle
+func TestRebaseTree_SourceCannotBeDirectChildOfDest(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial
+	env.repo.BranchWithCommit("treecko")
+	env.repo.BranchWithCommit("grovyle")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("grovyle")
+	dest := env.repo.LookupBranch("treecko")
+	gotResult := RebaseTree(env.repo.Repo, source, dest)
+
+	wantError := errors.New("Source is already a child of destination")
+
+	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
+		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
+	}
+}
 
 // Initial:
 //
@@ -777,7 +849,186 @@ func TestRebaseTree_GardevoirOntoGlalie(t *testing.T) {
 	}
 }
 
+// Initial:
+//
+//	master ─── mew ─┬─ treecko
+//	                └─ mudkip
+func TestRebaseTree_MergeConflict_Result(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.CreateAndSwitchBranch("treecko")
+	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	gotResult := RebaseTree(env.repo.Repo, source, dest)
+
+	if gotResult.Type != RebaseTreeMergeConflict {
+		t.Error("Operation did not yield merge conflict, but merge conflict expected")
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko
+//	                └─ mudkip
+func TestRebaseTree_MergeConflict_CannotCallRebaseTreeAgain(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.CreateAndSwitchBranch("treecko")
+	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Try doing Rebase tree again
+	gotResult := RebaseTree(env.repo.Repo, source, dest)
+
+	wantError := errors.New("Cannot rebase while another rebase is in progress. Abort or continue the existing rebase")
+
+	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
+		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko
+//	                └─ mudkip
+func TestRebaseTree_MergeConflict_CreatesFiles(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.CreateAndSwitchBranch("treecko")
+	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	gotString := env.repo.ReadFile(".git/tree/rebasing")
+	wantString := ""
+	if gotString != wantString {
+		t.Errorf("Got rebasing file: %v, but want file: %v", gotString, wantString)
+	}
+
+	gotString = env.repo.ReadFile(".git/tree/rebasing-source")
+	wantString = "treecko"
+	if gotString != wantString {
+		t.Errorf("Got rebasing-source file: %v, but want file: %v", gotString, wantString)
+	}
+
+	gotString = env.repo.ReadFile(".git/tree/rebasing-dest")
+	wantString = "mudkip"
+	if gotString != wantString {
+		t.Errorf("Got rebasing-dest file: %v, but want file: %v", gotString, wantString)
+	}
+
+	gotString = env.repo.ReadFile(".git/tree/rebasing-temps")
+	wantString = "rebase-treecko treecko"
+	if gotString != wantString {
+		t.Errorf("Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTree_MergeConflict_RebasingTempsContainsProperBranches(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Should contain only branches that we attempted to rebase (we never reached `sceptile`).
+	gotString := env.repo.ReadFile(".git/tree/rebasing-temps")
+	wantString := `rebase-treecko treecko
+rebase-grovyle grovyle`
+	if gotString != wantString {
+		t.Errorf("Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Get the oid's of the commits the branches currently point to.
+	treeckoOid := env.repo.LookupBranch("treecko").Target()
+	grovyleOid := env.repo.LookupBranch("grovyle").Target()
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	tempTreeckoOid := env.repo.LookupBranch("rebase-treecko").Target()
+	tempGrovyleOid := env.repo.LookupBranch("rebase-grovyle").Target()
+
+	// The temporary branches should point to the commits where the rebased
+	// branches used to point to.
+	if *treeckoOid != *tempTreeckoOid {
+		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *tempTreeckoOid)
+	}
+	if *grovyleOid != *tempGrovyleOid {
+		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *tempGrovyleOid)
+	}
+}
+
 // TESTS TO ADD:
-//  - MergeConflict
 //  - Aborting a MergeConflict
 //  - Continuing a MergeConflict
