@@ -78,6 +78,11 @@ func (t *TestRepository) ReadFile(filename string) string {
 	return store.ReadFile(t.Repo.Workdir() + filename)
 }
 
+// Returns whether the file exists.
+func (t *TestRepository) FileExists(filename string) bool {
+	return store.FileExists(t.Repo.Workdir() + filename)
+}
+
 // Stage the the specified files. If no argument is provided, all unstaged files
 // are staged.
 func (t *TestRepository) StageFiles(names ...string) {

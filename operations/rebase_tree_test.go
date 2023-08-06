@@ -1029,6 +1029,139 @@ func TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits(t *testi
 	}
 }
 
+// -------------------------------------------------------------------------- \
+// RebaseTreeAbort                                                            |
+// -------------------------------------------------------------------------- /
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeAbort_MovesRebasedBranchesToOriginalLocation(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Get the oid's of the commits the branches currently point to.
+	treeckoOid := env.repo.LookupBranch("treecko").Target()
+	grovyleOid := env.repo.LookupBranch("grovyle").Target()
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Abort the rebase
+	RebaseTreeAbort(env.repo.Repo)
+
+	newTreeckoOid := env.repo.LookupBranch("treecko").Target()
+	newGrovyleOid := env.repo.LookupBranch("grovyle").Target()
+
+	// After aborting, the rebased branches should point back to their original
+	// commits.
+	if *treeckoOid != *newTreeckoOid {
+		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *newTreeckoOid)
+	}
+	if *grovyleOid != *newGrovyleOid {
+		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *newGrovyleOid)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeAbort_DeletesFiles(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Abort the rebase
+	RebaseTreeAbort(env.repo.Repo)
+
+	filename := ".git/tree/rebasing"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-source"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-dest"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-temps"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeAbort_DeletesTemporaryBranches(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Abort the rebase
+	RebaseTreeAbort(env.repo.Repo)
+
+	tempTreecko := env.repo.LookupBranch("rebase-treecko")
+	tempGrovyle := env.repo.LookupBranch("rebase-grovyle")
+
+	if tempTreecko != nil {
+		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-treecko")
+	}
+	if tempGrovyle != nil {
+		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
+	}
+}
+
 // TESTS TO ADD:
-//  - Aborting a MergeConflict
 //  - Continuing a MergeConflict
