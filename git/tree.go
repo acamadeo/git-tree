@@ -126,7 +126,7 @@ func createRepoTree(repo *git.Repository) repoTree {
 func isIdenticalRecurse(nodeA git.Oid, treeA *repoTree, nodeB git.Oid, treeB *repoTree) bool {
 	// Check whether the current node is identical.
 	commitA, _ := treeA.repo.LookupCommit(&nodeA)
-	commitB, _ := treeA.repo.LookupCommit(&nodeB)
+	commitB, _ := treeB.repo.LookupCommit(&nodeB)
 
 	if commitA.Message() != commitB.Message() {
 		return false

@@ -1030,6 +1030,273 @@ func TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits(t *testi
 }
 
 // -------------------------------------------------------------------------- \
+// RebaseTreeContinue                                                         |
+// -------------------------------------------------------------------------- /
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeContinue_ForgetToStageChanges(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts (but forget to stage changes)
+	env.repo.WriteFile("favorite", "grovyle")
+
+	// Continue the rebase
+	gotResult := RebaseTreeContinue(env.repo.Repo)
+
+	if gotResult.Type != RebaseTreeUnstagedChanges {
+		t.Errorf("Expected operation to result in %q, but it did not", "RebaseTreeUnstagedChanges")
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeContinue_SuccessfulRebase_SuccessResult(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts
+	env.repo.WriteFile("favorite", "grovyle")
+	env.repo.StageFiles()
+
+	// Continue the rebase
+	gotResult := RebaseTreeContinue(env.repo.Repo)
+
+	if gotResult.Type != RebaseTreeSuccess {
+		t.Error("Expected operation successful, but it was not")
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+//
+// Result:
+//
+//	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
+func TestRebaseTreeContinue_SuccessfulRebase_BranchesMoved(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts
+	env.repo.WriteFile("favorite", "grovyle")
+	env.repo.StageFiles()
+
+	// Continue the rebase
+	RebaseTreeContinue(env.repo.Repo)
+	// Clean up extra branches from `git-tree init`.
+	Drop(env.repo.Repo)
+
+	// Setup expected
+	expectedRepo := testutil.CreateTestRepo()
+	defer expectedRepo.Free()
+
+	expectedRepo.BranchWithCommit("mew")
+	expectedRepo.BranchWithCommit("mudkip")
+	expectedRepo.BranchWithCommit("treecko")
+	expectedRepo.BranchWithCommit("grovyle")
+	expectedRepo.BranchWithCommit("sceptile")
+
+	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
+		t.Error("Expected rebased repository to match expected, but it does not")
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+//
+// Result:
+//
+//	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
+func TestRebaseTreeContinue_SuccessfulRebase_DeletesFiles(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts
+	env.repo.WriteFile("favorite", "grovyle")
+	env.repo.StageFiles()
+
+	// Continue the rebase
+	RebaseTreeContinue(env.repo.Repo)
+
+	filename := ".git/tree/rebasing"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-source"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-dest"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+
+	filename = ".git/tree/rebasing-temps"
+	if env.repo.FileExists(filename) {
+		t.Errorf("Expected file %q not to exist, but it does", filename)
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+//
+// Result:
+//
+//	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
+func TestRebaseTreeContinue_SuccessfulRebase_DeletesTemporaryBranches(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.BranchWithCommit("sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts
+	env.repo.WriteFile("favorite", "grovyle")
+	env.repo.StageFiles()
+
+	// Continue the rebase
+	RebaseTreeContinue(env.repo.Repo)
+
+	tempTreecko := env.repo.LookupBranch("rebase-treecko")
+	tempGrovyle := env.repo.LookupBranch("rebase-grovyle")
+
+	if tempTreecko != nil {
+		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-treecko")
+	}
+	if tempGrovyle != nil {
+		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
+	}
+}
+
+// Initial:
+//
+//	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
+//	                └─ mudkip
+func TestRebaseTreeContinue_RunIntoNewMergeConflict(t *testing.T) {
+	env := setUp(t)
+	defer env.tearDown(t)
+
+	// Setup initial - write conflicting contents to the same file.
+	env.repo.BranchWithCommit("mew")
+	env.repo.BranchWithCommit("treecko")
+	env.repo.CreateAndSwitchBranch("grovyle")
+	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	env.repo.CreateAndSwitchBranch("sceptile")
+	env.repo.WriteAndCommitFile("overpowered", "sceptile", "sceptile")
+	env.repo.SwitchBranch("mew")
+	env.repo.CreateAndSwitchBranch("mudkip")
+	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	env.repo.WriteAndCommitFile("overpowered", "mudkip", "mudkip")
+	Init(env.repo.Repo)
+
+	// Rebase tree
+	source := env.repo.LookupBranch("treecko")
+	dest := env.repo.LookupBranch("mudkip")
+	RebaseTree(env.repo.Repo, source, dest)
+
+	// Fix merge conflicts
+	env.repo.WriteFile("favorite", "grovyle")
+	env.repo.StageFiles()
+
+	// Continue the rebase (but another conflict is expected for `sceptile` branch)
+	gotResult := RebaseTreeContinue(env.repo.Repo)
+
+	if gotResult.Type != RebaseTreeMergeConflict {
+		t.Error("Operation did not yield merge conflict, but merge conflict expected")
+	}
+}
+
+// -------------------------------------------------------------------------- \
 // RebaseTreeAbort                                                            |
 // -------------------------------------------------------------------------- /
 
@@ -1162,6 +1429,3 @@ func TestRebaseTreeAbort_DeletesTemporaryBranches(t *testing.T) {
 		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
 	}
 }
-
-// TESTS TO ADD:
-//  - Continuing a MergeConflict

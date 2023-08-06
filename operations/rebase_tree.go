@@ -79,6 +79,11 @@ func RebaseTreeContinue(repo *git.Repository) RebaseTreeResult {
 	dest := branchMap.FindBranch(destName)
 
 	runner := newRebaseTreeRunner(repo, source, dest, branchMap)
+
+	// Populate the runner with temporary branches from previous runs.
+	path := common.RebasingTempsPath(repo.Path())
+	runner.tempBranches = store.ReadTemporaryBranches(repo, path)
+
 	return runner.Execute()
 }
 
