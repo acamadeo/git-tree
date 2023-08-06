@@ -3,7 +3,6 @@ package operations
 import (
 	"testing"
 
-	dropCmd "github.com/abaresk/git-tree/commands/drop"
 	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/testutil"
 )
@@ -30,7 +29,6 @@ func TestRebaseTree_RebaseOneChild(t *testing.T) {
 	env.repo.SwitchBranch("mew")
 	env.repo.BranchWithCommit("mudkip")
 	// TODO: Figure out why root is at mew instead of master!
-	// TODO: Turn init and drop into operations (so we don't need to import commands here)!
 	Init(env.repo.Repo)
 
 	// Rebase tree
@@ -38,7 +36,7 @@ func TestRebaseTree_RebaseOneChild(t *testing.T) {
 	dest := env.repo.LookupBranch("mudkip")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -78,7 +76,7 @@ func TestRebaseTree_RebaseMultipleChildren(t *testing.T) {
 	dest := env.repo.LookupBranch("mudkip")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -119,7 +117,7 @@ func TestRebaseTree_RebaseOntoNestedBranch(t *testing.T) {
 	dest := env.repo.LookupBranch("grovyle")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -159,7 +157,7 @@ func TestRebaseTree_ForkBranchLine(t *testing.T) {
 	dest := env.repo.LookupBranch("mew")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -206,7 +204,7 @@ func TestRebaseTree_MultipleRebases_Fork(t *testing.T) {
 	RebaseTree(env.repo.Repo, source, dest)
 
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -256,7 +254,7 @@ func TestRebaseTree_MultipleRebases_Merge(t *testing.T) {
 	RebaseTree(env.repo.Repo, source, dest)
 
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -295,7 +293,7 @@ func TestRebaseTree_RebaseOntoFirstBranch(t *testing.T) {
 	dest := env.repo.LookupBranch("master")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -346,7 +344,7 @@ func TestRebaseTree_KirliaOntoGlalie(t *testing.T) {
 	dest := env.repo.LookupBranch("glalie")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -403,7 +401,7 @@ func TestRebaseTree_SnoruntOntoGardevoir(t *testing.T) {
 	dest := env.repo.LookupBranch("gardevoir")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -463,7 +461,7 @@ func TestRebaseTree_KirliaOntoSnorunt(t *testing.T) {
 	dest := env.repo.LookupBranch("snorunt")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -523,7 +521,7 @@ func TestRebaseTree_SnoruntOntoKirlia(t *testing.T) {
 	dest := env.repo.LookupBranch("kirlia")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -582,7 +580,7 @@ func TestRebaseTree_GlalieOntoKirlia(t *testing.T) {
 	dest := env.repo.LookupBranch("kirlia")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -641,7 +639,7 @@ func TestRebaseTree_GardevoirOntoSnorunt(t *testing.T) {
 	dest := env.repo.LookupBranch("snorunt")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -699,7 +697,7 @@ func TestRebaseTree_GlalieOntoGardevoir(t *testing.T) {
 	dest := env.repo.LookupBranch("gardevoir")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -757,7 +755,7 @@ func TestRebaseTree_GardevoirOntoGlalie(t *testing.T) {
 	dest := env.repo.LookupBranch("glalie")
 	RebaseTree(env.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	dropCmd.NewDropCommand().Execute()
+	Drop(env.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()

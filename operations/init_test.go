@@ -4,25 +4,10 @@ import (
 	"testing"
 
 	"github.com/abaresk/git-tree/store"
-	"github.com/abaresk/git-tree/testutil"
 )
 
-type testEnvInit struct {
-	repo testutil.TestRepository
-}
-
-func setUpInit(t *testing.T) testEnvInit {
-	return testEnvInit{
-		repo: testutil.CreateTestRepo(),
-	}
-}
-
-func (env *testEnvInit) tearDown(t *testing.T) {
-	env.repo.Free()
-}
-
 func TestInit_CreatesBranchMapFile(t *testing.T) {
-	env := setUpInit(t)
+	env := setUp(t)
 	defer env.tearDown(t)
 
 	env.repo.BranchWithCommit("treecko")
@@ -40,7 +25,7 @@ func TestInit_CreatesBranchMapFile(t *testing.T) {
 //	master ─── eevee ─┬─ espeon
 //	                  └─ umbreon
 func TestInit_CreatesRootBranchAtMostCommonAncestor(t *testing.T) {
-	env := setUpInit(t)
+	env := setUp(t)
 	defer env.tearDown(t)
 
 	env.repo.BranchWithCommit("eevee")
@@ -68,7 +53,7 @@ func TestInit_CreatesRootBranchAtMostCommonAncestor(t *testing.T) {
 //	                └─ wurmple ─┬─ silcoon ─── beautifly
 //	                            └─ cascoon ─── dustox
 func TestInit_BranchMapFile_AllBranches(t *testing.T) {
-	env := setUpInit(t)
+	env := setUp(t)
 	defer env.tearDown(t)
 
 	env.repo.BranchWithCommit("mew")
@@ -109,7 +94,7 @@ silcoon beautifly`
 //	                └─ wurmple ─┬─ silcoon ─── beautifly
 //	                            └─ cascoon ─── dustox
 func TestInit_BranchMapFile_SubsetOfBranches(t *testing.T) {
-	env := setUpInit(t)
+	env := setUp(t)
 	defer env.tearDown(t)
 
 	env.repo.BranchWithCommit("mew")
