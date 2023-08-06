@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	gitutil "github.com/abaresk/git-tree/git"
@@ -46,12 +47,27 @@ func string2TempBranchMap(repo *git.Repository, input []string) models.TempBranc
 	return output
 }
 
+func sortedTempBranches(tempMap models.TempBranchMap) []*git.Branch {
+	keys := []*git.Branch{}
+	for tempBranch := range tempMap {
+		keys = append(keys, tempBranch)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return strings.Compare(gitutil.BranchName(keys[i]), gitutil.BranchName(keys[j])) < 0
+	})
+	return keys
+}
+
+// Temporary branches are listed alphabetically for consistency.
 func tempBranchMap2String(tempMap models.TempBranchMap) string {
+	sortedTempBranches := sortedTempBranches(tempMap)
+
 	output := []string{}
-	for tempBranch, origBranch := range tempMap {
+	for _, tempBranch := range sortedTempBranches {
+		origBranch := tempMap[tempBranch]
+
 		tempName := gitutil.BranchName(tempBranch)
 		origName := gitutil.BranchName(origBranch)
-
 		output = append(output, fmt.Sprintf("%s %s", tempName, origName))
 	}
 	return strings.Join(output, "\n")

@@ -981,8 +981,8 @@ func TestRebaseTree_MergeConflict_RebasingTempsContainsProperBranches(t *testing
 
 	// Should contain only branches that we attempted to rebase (we never reached `sceptile`).
 	gotString := env.repo.ReadFile(".git/tree/rebasing-temps")
-	wantString := `rebase-treecko treecko
-rebase-grovyle grovyle`
+	wantString := `rebase-grovyle grovyle
+rebase-treecko treecko`
 	if gotString != wantString {
 		t.Errorf("Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
 	}
