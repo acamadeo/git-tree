@@ -1,35 +1,12 @@
 package operations
 
 import (
-	"os"
 	"testing"
 
 	dropCmd "github.com/abaresk/git-tree/commands/drop"
-	initCmd "github.com/abaresk/git-tree/commands/init"
 	gitutil "github.com/abaresk/git-tree/git"
 	"github.com/abaresk/git-tree/testutil"
 )
-
-type testEnv struct {
-	repo testutil.TestRepository
-	// Directory the test is running in. In setUp(), we `cd` into `repo`'s
-	// working directory. In tearDown(), we return to `testDir`.
-	testDir string
-}
-
-func setUp(t *testing.T) testEnv {
-	repo := testutil.CreateTestRepo()
-	os.Chdir(repo.Repo.Workdir())
-
-	return testEnv{
-		repo: repo,
-	}
-}
-
-func (env *testEnv) tearDown(t *testing.T) {
-	os.Chdir(env.testDir)
-	env.repo.Free()
-}
 
 // -------------------------------------------------------------------------- \
 // RebaseTree                                                                 |
@@ -54,7 +31,7 @@ func TestRebaseTree_RebaseOneChild(t *testing.T) {
 	env.repo.BranchWithCommit("mudkip")
 	// TODO: Figure out why root is at mew instead of master!
 	// TODO: Turn init and drop into operations (so we don't need to import commands here)!
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("treecko")
@@ -94,7 +71,7 @@ func TestRebaseTree_RebaseMultipleChildren(t *testing.T) {
 	env.repo.BranchWithCommit("grovyle")
 	env.repo.SwitchBranch("mew")
 	env.repo.BranchWithCommit("mudkip")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("treecko")
@@ -135,7 +112,7 @@ func TestRebaseTree_RebaseOntoNestedBranch(t *testing.T) {
 	env.repo.BranchWithCommit("grovyle")
 	env.repo.SwitchBranch("mew")
 	env.repo.BranchWithCommit("mudkip")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("mudkip")
@@ -175,7 +152,7 @@ func TestRebaseTree_ForkBranchLine(t *testing.T) {
 	env.repo.BranchWithCommit("mudkip")
 	env.repo.BranchWithCommit("treecko")
 	env.repo.BranchWithCommit("grovyle")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("treecko")
@@ -217,7 +194,7 @@ func TestRebaseTree_MultipleRebases_Fork(t *testing.T) {
 	env.repo.BranchWithCommit("flareon")
 	env.repo.BranchWithCommit("jolteon")
 	env.repo.BranchWithCommit("vaporeon")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree operations
 	source := env.repo.LookupBranch("jolteon")
@@ -267,7 +244,7 @@ func TestRebaseTree_MultipleRebases_Merge(t *testing.T) {
 	env.repo.BranchWithCommit("jolteon")
 	env.repo.SwitchBranch("eevee")
 	env.repo.BranchWithCommit("flareon")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree operations
 	source := env.repo.LookupBranch("jolteon")
@@ -311,7 +288,7 @@ func TestRebaseTree_RebaseOntoFirstBranch(t *testing.T) {
 	env.repo.BranchWithCommit("mew")
 	env.repo.BranchWithCommit("treecko")
 	env.repo.BranchWithCommit("grovyle")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("treecko")
@@ -362,7 +339,7 @@ func TestRebaseTree_KirliaOntoGlalie(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("kirlia")
@@ -419,7 +396,7 @@ func TestRebaseTree_SnoruntOntoGardevoir(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("snorunt")
@@ -479,7 +456,7 @@ func TestRebaseTree_KirliaOntoSnorunt(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("kirlia")
@@ -539,7 +516,7 @@ func TestRebaseTree_SnoruntOntoKirlia(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("snorunt")
@@ -598,7 +575,7 @@ func TestRebaseTree_GlalieOntoKirlia(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("glalie")
@@ -657,7 +634,7 @@ func TestRebaseTree_GardevoirOntoSnorunt(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("gardevoir")
@@ -715,7 +692,7 @@ func TestRebaseTree_GlalieOntoGardevoir(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("glalie")
@@ -773,7 +750,7 @@ func TestRebaseTree_GardevoirOntoGlalie(t *testing.T) {
 	env.repo.BranchWithCommit("glalie")
 	env.repo.SwitchBranch("snorunt")
 	env.repo.BranchWithCommit("froslass")
-	initCmd.NewInitCommand().Execute()
+	Init(env.repo.Repo)
 
 	// Rebase tree
 	source := env.repo.LookupBranch("gardevoir")
