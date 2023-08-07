@@ -1,8 +1,8 @@
 package common
 
 import (
-	"github.com/abaresk/git-tree/models"
-	"github.com/abaresk/git-tree/store"
+	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
 

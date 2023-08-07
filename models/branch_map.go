@@ -3,7 +3,7 @@ package models
 import (
 	"fmt"
 
-	gitutil "github.com/abaresk/git-tree/git"
+	gitutil "github.com/acamadeo/git-tree/git"
 	git "github.com/libgit2/git2go/v34"
 )
 

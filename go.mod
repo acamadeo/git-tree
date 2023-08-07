@@ -1,4 +1,4 @@
-module github.com/abaresk/git-tree
+module github.com/acamadeo/git-tree
 
 go 1.19
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/abaresk/git-tree/common"
-	gitutil "github.com/abaresk/git-tree/git"
-	"github.com/abaresk/git-tree/models"
-	"github.com/abaresk/git-tree/store"
+	"github.com/acamadeo/git-tree/common"
+	gitutil "github.com/acamadeo/git-tree/git"
+	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
 

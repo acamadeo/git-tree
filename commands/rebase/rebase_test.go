@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	initCmd "github.com/abaresk/git-tree/commands/init"
-	"github.com/abaresk/git-tree/testutil"
+	initCmd "github.com/acamadeo/git-tree/commands/init"
+	"github.com/acamadeo/git-tree/testutil"
 )
 
 type testEnv struct {

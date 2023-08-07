@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	gitutil "github.com/abaresk/git-tree/git"
-	"github.com/abaresk/git-tree/testutil"
+	gitutil "github.com/acamadeo/git-tree/git"
+	"github.com/acamadeo/git-tree/testutil"
 )
 
 // -------------------------------------------------------------------------- \

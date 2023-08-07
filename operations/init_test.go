@@ -3,7 +3,7 @@ package operations
 import (
 	"testing"
 
-	"github.com/abaresk/git-tree/store"
+	"github.com/acamadeo/git-tree/store"
 )
 
 func TestInit_CreatesBranchMapFile(t *testing.T) {

@@ -3,9 +3,9 @@ package drop
 import (
 	"fmt"
 
-	"github.com/abaresk/git-tree/commands"
-	"github.com/abaresk/git-tree/common"
-	"github.com/abaresk/git-tree/operations"
+	"github.com/acamadeo/git-tree/commands"
+	"github.com/acamadeo/git-tree/common"
+	"github.com/acamadeo/git-tree/operations"
 	"github.com/spf13/cobra"
 )
 

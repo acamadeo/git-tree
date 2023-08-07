@@ -3,10 +3,10 @@ package main
 import (
 	"os"
 
-	branchCmd "github.com/abaresk/git-tree/commands/branch"
-	dropCmd "github.com/abaresk/git-tree/commands/drop"
-	initCmd "github.com/abaresk/git-tree/commands/init"
-	rebaseCmd "github.com/abaresk/git-tree/commands/rebase"
+	branchCmd "github.com/acamadeo/git-tree/commands/branch"
+	dropCmd "github.com/acamadeo/git-tree/commands/drop"
+	initCmd "github.com/acamadeo/git-tree/commands/init"
+	rebaseCmd "github.com/acamadeo/git-tree/commands/rebase"
 	"github.com/spf13/cobra"
 )
 

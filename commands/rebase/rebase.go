@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/abaresk/git-tree/commands"
-	"github.com/abaresk/git-tree/common"
-	"github.com/abaresk/git-tree/operations"
+	"github.com/acamadeo/git-tree/commands"
+	"github.com/acamadeo/git-tree/common"
+	"github.com/acamadeo/git-tree/operations"
 	git "github.com/libgit2/git2go/v34"
 	"github.com/spf13/cobra"
 )

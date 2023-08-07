@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/abaresk/git-tree/common"
-	"github.com/abaresk/git-tree/store"
+	"github.com/acamadeo/git-tree/common"
+	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
 

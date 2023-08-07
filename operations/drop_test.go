@@ -3,8 +3,8 @@ package operations
 import (
 	"testing"
 
-	"github.com/abaresk/git-tree/store"
-	"github.com/abaresk/git-tree/testutil"
+	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/testutil"
 )
 
 type testEnvDrop struct {

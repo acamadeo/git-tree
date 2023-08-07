@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/abaresk/git-tree/models"
+	"github.com/acamadeo/git-tree/models"
 )
 
 // Read obsolescence map file

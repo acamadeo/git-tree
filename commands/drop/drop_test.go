@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/abaresk/git-tree/testutil"
+	"github.com/acamadeo/git-tree/testutil"
 )
 
 type testEnv struct {
