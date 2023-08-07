@@ -126,3 +126,8 @@ jobs:
       run: |
         ./.github/scripts/windows/build-git-tree.sh
       working-directory: ./main
+
+    - name: Run tests
+      run: |
+        ./.github/scripts/windows/test-git-tree.sh
+      working-directory: ./main

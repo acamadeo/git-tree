@@ -282,7 +282,7 @@ func (r *rebaseTreeRunner) createTempBranch(branch *git.Branch) *git.Branch {
 func (r *rebaseTreeRunner) handleMergeConflict() {
 	// Create a file indicating a rebase is in progress.
 	path := common.RebasingPath(r.repo.Path())
-	os.OpenFile(path, os.O_RDONLY|os.O_CREATE, 0666)
+	store.OverwriteFile(path, "")
 
 	// Store the `source` and `dest` branches.
 	path = common.RebasingSourcePath(r.repo.Path())
