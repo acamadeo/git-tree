@@ -3,7 +3,7 @@ name: build
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout git2go
@@ -12,10 +12,12 @@ jobs:
         repository: libgit2/git2go
         path: git2go
 
+    - name: Install libgit2 dependencies
+      run: sudo apt-get install -y --no-install-recommends libssh2-1-dev
+
     - name: Build static libgit2
       run: |
         git submodule update --init
-        sudo apt-get install -y --no-install-recommends libssh2-1-dev
         sudo ./script/build-libgit2.sh --static --system
       working-directory: ./git2go
 
@@ -39,4 +41,88 @@ jobs:
 
     - name: Run tests
       run: go test -v ./...
+      working-directory: ./main
+
+
+  build-macos:
+    runs-on: macOS-latest
+    env:
+      PKG_CONFIG_PATH: /Users/runner/work/git-tree/git-tree/git2go/static-build/install/lib/pkgconfig/
+    steps:
+    - name: Checkout git2go
+      uses: actions/checkout@v3
+      with:
+        repository: libgit2/git2go
+        path: git2go
+
+    - name: Build static libgit2
+      run: |
+        git submodule update --init
+        sudo ./script/build-libgit2.sh --static
+      working-directory: ./git2go
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.19'
+
+    - name: Checkout git-tree
+      uses: actions/checkout@v3
+      with:
+        path: main
+
+    - name: Install dependencies
+      run: go get .
+      working-directory: ./main
+
+    - name: Build
+      run: |
+        go build -tags static,system_libgit2 -v ./...
+      working-directory: ./main
+
+    - name: Run tests
+      run: |
+        go test -tags static,system_libgit2 -v ./...
+      working-directory: ./main
+
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    env:
+      GOROOT: /d/a/_temp/msys64/mingw64/lib/go
+    steps:
+    - name: Setup MSYS
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: git make mingw-w64-x86_64-cmake mingw-w64-ucrt-x86_64-gcc mingw-w64-x86_64-go
+
+    - name: Checkout git2go
+      uses: actions/checkout@v3
+      with:
+        repository: libgit2/git2go
+        path: git2go
+
+    - name: Setup vendored libgit2
+      run: |
+        git submodule update --init
+      working-directory: ./git2go
+
+    - name: Checkout git-tree
+      uses: actions/checkout@v3
+      with:
+        path: main
+
+    - name: Build vendored libgit2
+      run: |
+        mkdir -p /d/a/git-tree/git-tree/git2go/vendor/libgit2/build
+        ./.github/scripts/windows/build-libgit2.sh
+      working-directory: ./main
+
+    - name: Build git-tree
+      run: |
+        ./.github/scripts/windows/build-git-tree.sh
       working-directory: ./main
