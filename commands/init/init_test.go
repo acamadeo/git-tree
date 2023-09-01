@@ -6,54 +6,52 @@ import (
 	"testing"
 
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type testEnv struct {
+type InitTestSuite struct {
+	suite.Suite
 	repo testutil.TestRepository
 	// Directory the test is running in. In setUp(), we `cd` into `repo`'s
 	// working directory. In tearDown(), we return to `testDir`.
 	testDir string
 }
 
-func setUp(t *testing.T) testEnv {
+func (suite *InitTestSuite) SetupTest() {
 	repo := testutil.CreateTestRepo()
 	os.Chdir(repo.Repo.Workdir())
-	return testEnv{
-		repo: repo,
-	}
+
+	suite.repo = repo
 }
 
-func (env *testEnv) tearDown(t *testing.T) {
-	os.Chdir(env.testDir)
-	env.repo.Free()
+func (suite *InitTestSuite) TearDownTest() {
+	os.Chdir(suite.testDir)
+	suite.repo.Free()
 }
 
-func TestInit_BranchDoesNotExist_RepoWithBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
-	env.repo.BranchWithCommit("treecko")
+func (suite *InitTestSuite) TestInit_BranchDoesNotExist_RepoWithBranches() {
+	suite.repo.BranchWithCommit("treecko")
 
 	cmd := NewInitCommand()
 	cmd.SetArgs([]string{"-b", "mudkip"})
 	gotError := cmd.Execute()
 
 	wantError := errors.New("Branch \"mudkip\" does not exist in the git repository.")
-	if gotError.Error() != wantError.Error() {
-		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
-	}
+	assert.Equal(suite.T(), gotError.Error(), wantError.Error(),
+		"Command got error %v, but want error %v", gotError, wantError)
 }
 
-func TestInit_BranchDoesNotExist_RepoBranchless(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *InitTestSuite) TestInit_BranchDoesNotExist_RepoBranchless() {
 	cmd := NewInitCommand()
 	cmd.SetArgs([]string{"-b", "mudkip"})
 	gotError := cmd.Execute()
 
 	wantError := errors.New("Branch \"mudkip\" does not exist in the git repository.")
-	if gotError.Error() != wantError.Error() {
-		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
-	}
+	assert.Equal(suite.T(), gotError.Error(), wantError.Error(),
+		"Command got error %v, but want error %v", gotError, wantError)
+}
+
+func TestInitTestSuite(t *testing.T) {
+	suite.Run(t, new(InitTestSuite))
 }

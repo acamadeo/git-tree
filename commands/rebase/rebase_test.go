@@ -1,60 +1,52 @@
 package rebase
 
 import (
-	"errors"
 	"os"
 	"testing"
 
 	initCmd "github.com/acamadeo/git-tree/commands/init"
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type testEnv struct {
+type RebaseTestSuite struct {
+	suite.Suite
 	repo testutil.TestRepository
 	// Directory the test is running in. In setUp(), we `cd` into `repo`'s
 	// working directory. In tearDown(), we return to `testDir`.
 	testDir string
 }
 
-func setUp(t *testing.T) testEnv {
+func (suite *RebaseTestSuite) SetupTest() {
 	repo := testutil.CreateTestRepo()
 	os.Chdir(repo.Repo.Workdir())
-	return testEnv{
-		repo: repo,
-	}
+
+	suite.repo = repo
 }
 
-func (env *testEnv) tearDown(t *testing.T) {
-	os.Chdir(env.testDir)
-	env.repo.Free()
+func (suite *RebaseTestSuite) TearDownTest() {
+	os.Chdir(suite.testDir)
+	suite.repo.Free()
 }
 
-func TestRebase_ErrorIfGitTreeNotInitialized(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTestSuite) TestRebase_ErrorIfGitTreeNotInitialized() {
 	gotError := NewRebaseCommand().Execute()
 
-	wantError := errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
-
-	if gotError.Error() != wantError.Error() {
-		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
-	}
+	wantError := "git-tree is not initialized. Run `git-tree init` to initialize."
+	assert.EqualError(suite.T(), gotError, wantError)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko
 //	                └─ mudkip
-func TestRebase_SourceBranchDoesNotExist(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTestSuite) TestRebase_SourceBranchDoesNotExist() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("mudkip")
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("mudkip")
 
 	// Run git-tree init.
 	initCmd.NewInitCommand().Execute()
@@ -63,25 +55,20 @@ func TestRebase_SourceBranchDoesNotExist(t *testing.T) {
 	cmd.SetArgs([]string{"-s", "torchic", "-d", "treecko"})
 	gotError := cmd.Execute()
 
-	wantError := errors.New("Could not find source branch \"torchic\".")
-	if gotError.Error() != wantError.Error() {
-		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
-	}
+	wantError := "Could not find source branch \"torchic\"."
+	assert.EqualError(suite.T(), gotError, wantError)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko
 //	                └─ mudkip
-func TestRebase_DestBranchDoesNotExist(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTestSuite) TestRebase_DestBranchDoesNotExist() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("mudkip")
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("mudkip")
 
 	// Run git-tree init.
 	initCmd.NewInitCommand().Execute()
@@ -90,8 +77,10 @@ func TestRebase_DestBranchDoesNotExist(t *testing.T) {
 	cmd.SetArgs([]string{"-s", "treecko", "-d", "torchic"})
 	gotError := cmd.Execute()
 
-	wantError := errors.New("Could not find dest branch \"torchic\".")
-	if gotError.Error() != wantError.Error() {
-		t.Errorf("Command got error %v, but want error %v", gotError, wantError)
-	}
+	wantError := "Could not find dest branch \"torchic\"."
+	assert.EqualError(suite.T(), gotError, wantError)
+}
+
+func TestRebaseTestSuite(t *testing.T) {
+	suite.Run(t, new(RebaseTestSuite))
 }

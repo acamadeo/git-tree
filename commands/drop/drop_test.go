@@ -5,36 +5,37 @@ import (
 	"testing"
 
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type testEnv struct {
+type DropTestSuite struct {
+	suite.Suite
 	repo testutil.TestRepository
 	// Directory the test is running in. In setUp(), we `cd` into `repo`'s
 	// working directory. In tearDown(), we return to `testDir`.
 	testDir string
 }
 
-func setUp(t *testing.T) testEnv {
+func (suite *DropTestSuite) SetupTest() {
 	repo := testutil.CreateTestRepo()
 	os.Chdir(repo.Repo.Workdir())
 
-	return testEnv{
-		repo: repo,
-	}
+	suite.repo = repo
 }
 
-func (env *testEnv) tearDown(t *testing.T) {
-	os.Chdir(env.testDir)
-	env.repo.Free()
+func (suite *DropTestSuite) TearDownTest() {
+	os.Chdir(suite.testDir)
+	suite.repo.Free()
 }
 
-func TestDrop_NoErrorIfGitTreeNotInitialized(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *DropTestSuite) TestDrop_NoErrorIfGitTreeNotInitialized() {
 	gotError := NewDropCommand().Execute()
 
-	if gotError != nil {
-		t.Errorf("Command got error %v, but want error %v", gotError, nil)
-	}
+	assert.Nil(suite.T(), gotError,
+		"Command got error %v, but want error %v", gotError, nil)
+}
+
+func TestDropTestSuite(t *testing.T) {
+	suite.Run(t, new(DropTestSuite))
 }
