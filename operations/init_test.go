@@ -4,46 +4,53 @@ import (
 	"testing"
 
 	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestInit_CreatesBranchMapFile(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
+type InitTestSuite struct {
+	suite.Suite
+	repo testutil.TestRepository
+}
 
-	env.repo.BranchWithCommit("treecko")
+func (suite *InitTestSuite) SetupTest() {
+	suite.repo = testutil.CreateTestRepo()
+}
 
-	Init(env.repo.Repo)
+func (suite *InitTestSuite) TearDownTest() {
+	suite.repo.Free()
+}
 
-	filename := env.repo.Repo.Path() + "tree/branches"
-	if !store.FileExists(filename) {
-		t.Errorf("Expected file %q to exist, but it does not", filename)
-	}
+func (suite *InitTestSuite) TestInit_CreatesBranchMapFile() {
+	suite.repo.BranchWithCommit("treecko")
+
+	Init(suite.repo.Repo)
+
+	filename := suite.repo.Repo.Path() + "tree/branches"
+	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 }
 
 // Branches:
 //
 //	master ─── eevee ─┬─ espeon
 //	                  └─ umbreon
-func TestInit_CreatesRootBranchAtMostCommonAncestor(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
+func (suite *InitTestSuite) TestInit_CreatesRootBranchAtMostCommonAncestor() {
+	suite.repo.BranchWithCommit("eevee")
+	suite.repo.BranchWithCommit("espeon")
+	suite.repo.SwitchBranch("eevee")
+	suite.repo.BranchWithCommit("umbreon")
 
-	env.repo.BranchWithCommit("eevee")
-	env.repo.BranchWithCommit("espeon")
-	env.repo.SwitchBranch("eevee")
-	env.repo.BranchWithCommit("umbreon")
+	eevee := suite.repo.LookupBranch("eevee")
+	espeon := suite.repo.LookupBranch("espeon")
+	umbreon := suite.repo.LookupBranch("umbreon")
+	Init(suite.repo.Repo, eevee, espeon, umbreon)
 
-	eevee := env.repo.LookupBranch("eevee")
-	espeon := env.repo.LookupBranch("espeon")
-	umbreon := env.repo.LookupBranch("umbreon")
-	Init(env.repo.Repo, eevee, espeon, umbreon)
+	rootBranch := suite.repo.LookupBranch("eevee")
+	gitTreeRoot := suite.repo.LookupBranch("git-tree-root")
 
-	rootBranch := env.repo.LookupBranch("eevee")
-	gitTreeRoot := env.repo.LookupBranch("git-tree-root")
-
-	if rootBranch.Reference.Cmp(gitTreeRoot.Reference) != 0 {
-		t.Errorf("Expected branch %q to point to branch %q, but it does not", "git-tree-root", "eevee")
-	}
+	assert.Zero(suite.T(), rootBranch.Reference.Cmp(gitTreeRoot.Reference),
+		"Expected branch %q to point to branch %q, but it does not", "git-tree-root", "eevee")
 }
 
 // Branches:
@@ -52,26 +59,23 @@ func TestInit_CreatesRootBranchAtMostCommonAncestor(t *testing.T) {
 //	                |           └─ mothim
 //	                └─ wurmple ─┬─ silcoon ─── beautifly
 //	                            └─ cascoon ─── dustox
-func TestInit_BranchMapFile_AllBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
+func (suite *InitTestSuite) TestInit_BranchMapFile_AllBranches() {
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("burmy")
+	suite.repo.BranchWithCommit("wormadam")
+	suite.repo.SwitchBranch("burmy")
+	suite.repo.BranchWithCommit("mothim")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("wurmple")
+	suite.repo.BranchWithCommit("silcoon")
+	suite.repo.BranchWithCommit("beautifly")
+	suite.repo.SwitchBranch("wurmple")
+	suite.repo.BranchWithCommit("cascoon")
+	suite.repo.BranchWithCommit("dustox")
 
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("burmy")
-	env.repo.BranchWithCommit("wormadam")
-	env.repo.SwitchBranch("burmy")
-	env.repo.BranchWithCommit("mothim")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("wurmple")
-	env.repo.BranchWithCommit("silcoon")
-	env.repo.BranchWithCommit("beautifly")
-	env.repo.SwitchBranch("wurmple")
-	env.repo.BranchWithCommit("cascoon")
-	env.repo.BranchWithCommit("dustox")
+	Init(suite.repo.Repo)
 
-	Init(env.repo.Repo)
-
-	gotString := env.repo.ReadFile(".git/tree/branches")
+	gotString := suite.repo.ReadFile(".git/tree/branches")
 	wantString :=
 		`git-tree-root
 git-tree-root master
@@ -82,9 +86,8 @@ wurmple cascoon silcoon
 cascoon dustox
 silcoon beautifly`
 
-	if gotString != wantString {
-		t.Errorf("Got branch map file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got branch map file: %v, but want file: %v", gotString, wantString)
 }
 
 // Branches:
@@ -93,37 +96,37 @@ silcoon beautifly`
 //	                |           └─ mothim
 //	                └─ wurmple ─┬─ silcoon ─── beautifly
 //	                            └─ cascoon ─── dustox
-func TestInit_BranchMapFile_SubsetOfBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
+func (suite *InitTestSuite) TestInit_BranchMapFile_SubsetOfBranches() {
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("burmy")
+	suite.repo.BranchWithCommit("wormadam")
+	suite.repo.SwitchBranch("burmy")
+	suite.repo.BranchWithCommit("mothim")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("wurmple")
+	suite.repo.BranchWithCommit("silcoon")
+	suite.repo.BranchWithCommit("beautifly")
+	suite.repo.SwitchBranch("wurmple")
+	suite.repo.BranchWithCommit("cascoon")
+	suite.repo.BranchWithCommit("dustox")
 
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("burmy")
-	env.repo.BranchWithCommit("wormadam")
-	env.repo.SwitchBranch("burmy")
-	env.repo.BranchWithCommit("mothim")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("wurmple")
-	env.repo.BranchWithCommit("silcoon")
-	env.repo.BranchWithCommit("beautifly")
-	env.repo.SwitchBranch("wurmple")
-	env.repo.BranchWithCommit("cascoon")
-	env.repo.BranchWithCommit("dustox")
+	mew := suite.repo.LookupBranch("mew")
+	wormadam := suite.repo.LookupBranch("wormadam")
+	mothim := suite.repo.LookupBranch("mothim")
+	silcoon := suite.repo.LookupBranch("silcoon")
+	dustox := suite.repo.LookupBranch("dustox")
+	Init(suite.repo.Repo, mew, wormadam, mothim, silcoon, dustox)
 
-	mew := env.repo.LookupBranch("mew")
-	wormadam := env.repo.LookupBranch("wormadam")
-	mothim := env.repo.LookupBranch("mothim")
-	silcoon := env.repo.LookupBranch("silcoon")
-	dustox := env.repo.LookupBranch("dustox")
-	Init(env.repo.Repo, mew, wormadam, mothim, silcoon, dustox)
-
-	gotString := env.repo.ReadFile(".git/tree/branches")
+	gotString := suite.repo.ReadFile(".git/tree/branches")
 	wantString :=
 		`git-tree-root
 git-tree-root mew
 mew wormadam mothim silcoon dustox`
 
-	if gotString != wantString {
-		t.Errorf("Got branch map file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got branch map file: %v, but want file: %v", gotString, wantString)
+}
+
+func TestInitTestSuite(t *testing.T) {
+	suite.Run(t, new(InitTestSuite))
 }

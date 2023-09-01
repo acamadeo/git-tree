@@ -5,47 +5,41 @@ import (
 
 	"github.com/acamadeo/git-tree/store"
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
-type testEnvDrop struct {
+type DropTestSuite struct {
+	suite.Suite
 	repo testutil.TestRepository
 }
 
-func setUpDrop(t *testing.T) testEnvDrop {
+func (suite *DropTestSuite) SetupTest() {
 	repo := testutil.CreateTestRepo()
 
 	// Run git-tree init.
 	Init(repo.Repo)
-
-	return testEnvDrop{
-		repo: repo,
-	}
+	suite.repo = repo
 }
 
-func (env *testEnvDrop) tearDown(t *testing.T) {
-	env.repo.Free()
+func (suite *DropTestSuite) TearDownTest() {
+	suite.repo.Free()
 }
 
-func TestDrop_DeletesRootBranch(t *testing.T) {
-	env := setUpDrop(t)
-	defer env.tearDown(t)
+func (suite *DropTestSuite) TestDrop_DeletesRootBranch() {
+	Drop(suite.repo.Repo)
 
-	Drop(env.repo.Repo)
-
-	rootBranch := env.repo.LookupBranch("git-tree-root")
-	if rootBranch != nil {
-		t.Errorf("Expected nil root branch but got %v", rootBranch)
-	}
+	rootBranch := suite.repo.LookupBranch("git-tree-root")
+	assert.Nil(suite.T(), rootBranch)
 }
 
-func TestDrop_DeletesGitTreeSubdir(t *testing.T) {
-	env := setUpDrop(t)
-	defer env.tearDown(t)
+func (suite *DropTestSuite) TestDrop_DeletesGitTreeSubdir() {
+	Drop(suite.repo.Repo)
 
-	Drop(env.repo.Repo)
+	dirName := suite.repo.Repo.Path() + "/tree"
+	assert.False(suite.T(), store.DirExists(dirName), "Expected directory %q not to exist, but it does", dirName)
+}
 
-	dirName := env.repo.Repo.Path() + "/tree"
-	if store.DirExists(dirName) {
-		t.Errorf("Expected directory %q not to exist, but it does", dirName)
-	}
+func TestDropTestSuite(t *testing.T) {
+	suite.Run(t, new(DropTestSuite))
 }

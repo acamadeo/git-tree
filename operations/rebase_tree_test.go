@@ -6,7 +6,22 @@ import (
 
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
+
+type RebaseTreeTestSuite struct {
+	suite.Suite
+	repo testutil.TestRepository
+}
+
+func (suite *RebaseTreeTestSuite) SetupTest() {
+	suite.repo = testutil.CreateTestRepo()
+}
+
+func (suite *RebaseTreeTestSuite) TearDownTest() {
+	suite.repo.Free()
+}
 
 // -------------------------------------------------------------------------- \
 // RebaseTree                                                                 |
@@ -15,72 +30,63 @@ import (
 // Initial:
 //
 //	master ─── mew
-func TestRebaseTree_SourceAndDestCannotBeTheSame(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_SourceAndDestCannotBeTheSame() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("mew")
-	dest := env.repo.LookupBranch("mew")
-	gotResult := RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("mew")
+	dest := suite.repo.LookupBranch("mew")
+	gotResult := RebaseTree(suite.repo.Repo, source, dest)
 
 	wantError := errors.New("Source and destination cannot be the same")
 
-	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
-		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeError)
+	assert.Equal(suite.T(), gotResult.Error.Error(), wantError.Error(),
+		"Operation got error %v, but want error %v", gotResult.Error, wantError)
 }
 
 // Initial:
 //
 //	master ─── treecko ─── grovyle
-func TestRebaseTree_SourceCannotBeAncestorOfDest(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_SourceCannotBeAncestorOfDest() {
 	// Setup initial
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("grovyle")
-	gotResult := RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("grovyle")
+	gotResult := RebaseTree(suite.repo.Repo, source, dest)
 
 	wantError := errors.New("Source cannot be an ancestor of destination")
 
-	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
-		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeError)
+	assert.Equal(suite.T(), gotResult.Error.Error(), wantError.Error(),
+		"Operation got error %v, but want error %v", gotResult.Error, wantError)
 }
 
 // Initial:
 //
 //	master ─── treecko ─── grovyle
-func TestRebaseTree_SourceCannotBeDirectChildOfDest(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_SourceCannotBeDirectChildOfDest() {
 	// Setup initial
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("grovyle")
-	dest := env.repo.LookupBranch("treecko")
-	gotResult := RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("grovyle")
+	dest := suite.repo.LookupBranch("treecko")
+	gotResult := RebaseTree(suite.repo.Repo, source, dest)
 
 	wantError := errors.New("Source is already a child of destination")
 
-	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
-		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeError)
+	assert.Equal(suite.T(), gotResult.Error.Error(), wantError.Error(),
+		"Operation got error %v, but want error %v", gotResult.Error, wantError)
 }
 
 // Initial:
@@ -91,24 +97,21 @@ func TestRebaseTree_SourceCannotBeDirectChildOfDest(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── mudkip ─── treecko
-func TestRebaseTree_RebaseOneChild(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOneChild() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("mudkip")
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("mudkip")
 	// TODO: Figure out why root is at mew instead of master!
-	Init(env.repo.Repo)
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -118,9 +121,8 @@ func TestRebaseTree_RebaseOneChild(t *testing.T) {
 	expectedRepo.BranchWithCommit("mudkip")
 	expectedRepo.BranchWithCommit("treecko")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -131,24 +133,21 @@ func TestRebaseTree_RebaseOneChild(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── mudkip ─── treecko ─── grovyle
-func TestRebaseTree_RebaseMultipleChildren(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseMultipleChildren() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -159,9 +158,8 @@ func TestRebaseTree_RebaseMultipleChildren(t *testing.T) {
 	expectedRepo.BranchWithCommit("treecko")
 	expectedRepo.BranchWithCommit("grovyle")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -172,24 +170,21 @@ func TestRebaseTree_RebaseMultipleChildren(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── treecko ─── grovyle ─── mudkip
-func TestRebaseTree_RebaseOntoNestedBranch(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOntoNestedBranch() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("mudkip")
-	dest := env.repo.LookupBranch("grovyle")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("mudkip")
+	dest := suite.repo.LookupBranch("grovyle")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -200,9 +195,8 @@ func TestRebaseTree_RebaseOntoNestedBranch(t *testing.T) {
 	expectedRepo.BranchWithCommit("grovyle")
 	expectedRepo.BranchWithCommit("mudkip")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -213,23 +207,20 @@ func TestRebaseTree_RebaseOntoNestedBranch(t *testing.T) {
 //
 //	master ─── mew ─┬─ treecko ─── grovyle
 //	                └─ mudkip
-func TestRebaseTree_ForkBranchLine(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_ForkBranchLine() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("mudkip")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("mudkip")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mew")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mew")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -241,9 +232,8 @@ func TestRebaseTree_ForkBranchLine(t *testing.T) {
 	expectedRepo.SwitchBranch("mew")
 	expectedRepo.BranchWithCommit("mudkip")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -255,28 +245,25 @@ func TestRebaseTree_ForkBranchLine(t *testing.T) {
 //	master ─── eevee ─┬─ vaporeon
 //	                  ├─ jolteon
 //	                  └─ flareon
-func TestRebaseTree_MultipleRebases_Fork(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MultipleRebases_Fork() {
 	// Setup initial
-	env.repo.BranchWithCommit("eevee")
-	env.repo.BranchWithCommit("flareon")
-	env.repo.BranchWithCommit("jolteon")
-	env.repo.BranchWithCommit("vaporeon")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("eevee")
+	suite.repo.BranchWithCommit("flareon")
+	suite.repo.BranchWithCommit("jolteon")
+	suite.repo.BranchWithCommit("vaporeon")
+	Init(suite.repo.Repo)
 
 	// Rebase tree operations
-	source := env.repo.LookupBranch("jolteon")
-	dest := env.repo.LookupBranch("eevee")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("jolteon")
+	dest := suite.repo.LookupBranch("eevee")
+	RebaseTree(suite.repo.Repo, source, dest)
 
-	source = env.repo.LookupBranch("vaporeon")
-	dest = env.repo.LookupBranch("eevee")
-	RebaseTree(env.repo.Repo, source, dest)
+	source = suite.repo.LookupBranch("vaporeon")
+	dest = suite.repo.LookupBranch("eevee")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -289,9 +276,8 @@ func TestRebaseTree_MultipleRebases_Fork(t *testing.T) {
 	expectedRepo.SwitchBranch("eevee")
 	expectedRepo.BranchWithCommit("flareon")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -303,30 +289,27 @@ func TestRebaseTree_MultipleRebases_Fork(t *testing.T) {
 // Result:
 //
 //	master ─── eevee ─── flareon ─── jolteon ─── vaporeon
-func TestRebaseTree_MultipleRebases_Merge(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MultipleRebases_Merge() {
 	// Setup initial
-	env.repo.BranchWithCommit("eevee")
-	env.repo.BranchWithCommit("vaporeon")
-	env.repo.SwitchBranch("eevee")
-	env.repo.BranchWithCommit("jolteon")
-	env.repo.SwitchBranch("eevee")
-	env.repo.BranchWithCommit("flareon")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("eevee")
+	suite.repo.BranchWithCommit("vaporeon")
+	suite.repo.SwitchBranch("eevee")
+	suite.repo.BranchWithCommit("jolteon")
+	suite.repo.SwitchBranch("eevee")
+	suite.repo.BranchWithCommit("flareon")
+	Init(suite.repo.Repo)
 
 	// Rebase tree operations
-	source := env.repo.LookupBranch("jolteon")
-	dest := env.repo.LookupBranch("flareon")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("jolteon")
+	dest := suite.repo.LookupBranch("flareon")
+	RebaseTree(suite.repo.Repo, source, dest)
 
-	source = env.repo.LookupBranch("vaporeon")
-	dest = env.repo.LookupBranch("jolteon")
-	RebaseTree(env.repo.Repo, source, dest)
+	source = suite.repo.LookupBranch("vaporeon")
+	dest = suite.repo.LookupBranch("jolteon")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -337,9 +320,8 @@ func TestRebaseTree_MultipleRebases_Merge(t *testing.T) {
 	expectedRepo.BranchWithCommit("jolteon")
 	expectedRepo.BranchWithCommit("vaporeon")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -350,22 +332,19 @@ func TestRebaseTree_MultipleRebases_Merge(t *testing.T) {
 //
 //	master ─┬─ mew
 //	        └─ treecko ───grovyle
-func TestRebaseTree_RebaseOntoFirstBranch(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOntoFirstBranch() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.BranchWithCommit("grovyle")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.BranchWithCommit("grovyle")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("master")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("master")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -376,9 +355,8 @@ func TestRebaseTree_RebaseOntoFirstBranch(t *testing.T) {
 	expectedRepo.BranchWithCommit("treecko")
 	expectedRepo.BranchWithCommit("grovyle")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -393,30 +371,27 @@ func TestRebaseTree_RebaseOntoFirstBranch(t *testing.T) {
 //	master ─── mew ─┬─ ralts
 //	                └─ snorunt ─┬─ glalie ───  kirlia ─┬─ gardevoir
 //	                            └─ froslass            └─ gallade
-func TestRebaseTree_KirliaOntoGlalie(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_KirliaOntoGlalie() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("kirlia")
-	dest := env.repo.LookupBranch("glalie")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("kirlia")
+	dest := suite.repo.LookupBranch("glalie")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -434,9 +409,8 @@ func TestRebaseTree_KirliaOntoGlalie(t *testing.T) {
 	expectedRepo.SwitchBranch("kirlia")
 	expectedRepo.BranchWithCommit("gallade")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -450,30 +424,27 @@ func TestRebaseTree_KirliaOntoGlalie(t *testing.T) {
 //
 //	master ─── mew ─── ralts ─── kirlia ─┬─ gardevoir ─── snorunt ─┬─ glalie
 //	                                     └─ gallade                └─ froslass
-func TestRebaseTree_SnoruntOntoGardevoir(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_SnoruntOntoGardevoir() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("snorunt")
-	dest := env.repo.LookupBranch("gardevoir")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("snorunt")
+	dest := suite.repo.LookupBranch("gardevoir")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -490,9 +461,8 @@ func TestRebaseTree_SnoruntOntoGardevoir(t *testing.T) {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -510,30 +480,27 @@ func TestRebaseTree_SnoruntOntoGardevoir(t *testing.T) {
 //	                            ├─ froslass
 //	                            └─ kirlia ─┬─ gardevoir
 //	                                       └─ gallade
-func TestRebaseTree_KirliaOntoSnorunt(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_KirliaOntoSnorunt() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("kirlia")
-	dest := env.repo.LookupBranch("snorunt")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("kirlia")
+	dest := suite.repo.LookupBranch("snorunt")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -552,9 +519,8 @@ func TestRebaseTree_KirliaOntoSnorunt(t *testing.T) {
 	expectedRepo.SwitchBranch("kirlia")
 	expectedRepo.BranchWithCommit("gallade")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -570,30 +536,27 @@ func TestRebaseTree_KirliaOntoSnorunt(t *testing.T) {
 //	                                     ├─ gallade
 //	                                     └─ snorunt ─┬─ glalie
 //	                                                 └─ froslass
-func TestRebaseTree_SnoruntOntoKirlia(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_SnoruntOntoKirlia() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("snorunt")
-	dest := env.repo.LookupBranch("kirlia")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("snorunt")
+	dest := suite.repo.LookupBranch("kirlia")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -611,9 +574,8 @@ func TestRebaseTree_SnoruntOntoKirlia(t *testing.T) {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -629,30 +591,27 @@ func TestRebaseTree_SnoruntOntoKirlia(t *testing.T) {
 //	                |                      ├─ gallade
 //	                |                      └─ glalie
 //	                └─ snorunt ─── froslass
-func TestRebaseTree_GlalieOntoKirlia(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_GlalieOntoKirlia() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("glalie")
-	dest := env.repo.LookupBranch("kirlia")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("glalie")
+	dest := suite.repo.LookupBranch("kirlia")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -670,9 +629,8 @@ func TestRebaseTree_GlalieOntoKirlia(t *testing.T) {
 	expectedRepo.BranchWithCommit("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -688,30 +646,27 @@ func TestRebaseTree_GlalieOntoKirlia(t *testing.T) {
 //	                └─ snorunt ─┬─ glalie
 //	                            ├─ froslass
 //	                            └─ gardevoir
-func TestRebaseTree_GardevoirOntoSnorunt(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_GardevoirOntoSnorunt() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("gardevoir")
-	dest := env.repo.LookupBranch("snorunt")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("gardevoir")
+	dest := suite.repo.LookupBranch("snorunt")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -729,9 +684,8 @@ func TestRebaseTree_GardevoirOntoSnorunt(t *testing.T) {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("gardevoir")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -746,30 +700,27 @@ func TestRebaseTree_GardevoirOntoSnorunt(t *testing.T) {
 //	master ─── mew ─┬─ ralts ───── kirlia ─┬─ gardevoir ─── glalie
 //	                |                      └─ gallade
 //	                └─ snorunt ─── froslass
-func TestRebaseTree_GlalieOntoGardevoir(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_GlalieOntoGardevoir() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("glalie")
-	dest := env.repo.LookupBranch("gardevoir")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("glalie")
+	dest := suite.repo.LookupBranch("gardevoir")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -786,9 +737,8 @@ func TestRebaseTree_GlalieOntoGardevoir(t *testing.T) {
 	expectedRepo.BranchWithCommit("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -804,30 +754,27 @@ func TestRebaseTree_GlalieOntoGardevoir(t *testing.T) {
 //	                |
 //	                └─ snorunt ─┬─ glalie ─── gardevoir
 //	                            └─ froslass
-func TestRebaseTree_GardevoirOntoGlalie(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_GardevoirOntoGlalie() {
 	// Setup initial
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("ralts")
-	env.repo.BranchWithCommit("kirlia")
-	env.repo.BranchWithCommit("gardevoir")
-	env.repo.SwitchBranch("kirlia")
-	env.repo.BranchWithCommit("gallade")
-	env.repo.SwitchBranch("mew")
-	env.repo.BranchWithCommit("snorunt")
-	env.repo.BranchWithCommit("glalie")
-	env.repo.SwitchBranch("snorunt")
-	env.repo.BranchWithCommit("froslass")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("ralts")
+	suite.repo.BranchWithCommit("kirlia")
+	suite.repo.BranchWithCommit("gardevoir")
+	suite.repo.SwitchBranch("kirlia")
+	suite.repo.BranchWithCommit("gallade")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.BranchWithCommit("snorunt")
+	suite.repo.BranchWithCommit("glalie")
+	suite.repo.SwitchBranch("snorunt")
+	suite.repo.BranchWithCommit("froslass")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("gardevoir")
-	dest := env.repo.LookupBranch("glalie")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("gardevoir")
+	dest := suite.repo.LookupBranch("glalie")
+	RebaseTree(suite.repo.Repo, source, dest)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -844,189 +791,165 @@ func TestRebaseTree_GardevoirOntoGlalie(t *testing.T) {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko
 //	                └─ mudkip
-func TestRebaseTree_MergeConflict_Result(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MergeConflict_Result() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.CreateAndSwitchBranch("treecko")
-	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.CreateAndSwitchBranch("treecko")
+	suite.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	gotResult := RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	gotResult := RebaseTree(suite.repo.Repo, source, dest)
 
-	if gotResult.Type != RebaseTreeMergeConflict {
-		t.Error("Operation did not yield merge conflict, but merge conflict expected")
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeMergeConflict,
+		"Operation did not yield merge conflict, but merge conflict expected")
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko
 //	                └─ mudkip
-func TestRebaseTree_MergeConflict_CannotCallRebaseTreeAgain(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MergeConflict_CannotCallRebaseTreeAgain() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.CreateAndSwitchBranch("treecko")
-	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.CreateAndSwitchBranch("treecko")
+	suite.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Try doing Rebase tree again
-	gotResult := RebaseTree(env.repo.Repo, source, dest)
+	gotResult := RebaseTree(suite.repo.Repo, source, dest)
 
 	wantError := errors.New("Cannot rebase while another rebase is in progress. Abort or continue the existing rebase")
 
-	if !(gotResult.Type == RebaseTreeError && gotResult.Error.Error() == wantError.Error()) {
-		t.Errorf("Operation got error %v, but want error %v", gotResult.Error, wantError)
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeError)
+	assert.Equal(suite.T(), gotResult.Error.Error(), wantError.Error(),
+		"Operation got error %v, but want error %v", gotResult.Error, wantError)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko
 //	                └─ mudkip
-func TestRebaseTree_MergeConflict_CreatesFiles(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MergeConflict_CreatesFiles() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.CreateAndSwitchBranch("treecko")
-	env.repo.WriteAndCommitFile("starter", "treecko", "treecko")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.CreateAndSwitchBranch("treecko")
+	suite.repo.WriteAndCommitFile("starter", "treecko", "treecko")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("starter", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
-	gotString := env.repo.ReadFile(".git/tree/rebasing")
+	gotString := suite.repo.ReadFile(".git/tree/rebasing")
 	wantString := ""
-	if gotString != wantString {
-		t.Errorf("Got rebasing file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got rebasing file: %v, but want file: %v", gotString, wantString)
 
-	gotString = env.repo.ReadFile(".git/tree/rebasing-source")
+	gotString = suite.repo.ReadFile(".git/tree/rebasing-source")
 	wantString = "treecko"
-	if gotString != wantString {
-		t.Errorf("Got rebasing-source file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got rebasing-source file: %v, but want file: %v", gotString, wantString)
 
-	gotString = env.repo.ReadFile(".git/tree/rebasing-dest")
+	gotString = suite.repo.ReadFile(".git/tree/rebasing-dest")
 	wantString = "mudkip"
-	if gotString != wantString {
-		t.Errorf("Got rebasing-dest file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got rebasing-dest file: %v, but want file: %v", gotString, wantString)
 
-	gotString = env.repo.ReadFile(".git/tree/rebasing-temps")
+	gotString = suite.repo.ReadFile(".git/tree/rebasing-temps")
 	wantString = "rebase-treecko treecko"
-	if gotString != wantString {
-		t.Errorf("Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTree_MergeConflict_RebasingTempsContainsProperBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MergeConflict_RebasingTempsContainsProperBranches() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Should contain only branches that we attempted to rebase (we never reached `sceptile`).
-	gotString := env.repo.ReadFile(".git/tree/rebasing-temps")
+	gotString := suite.repo.ReadFile(".git/tree/rebasing-temps")
 	wantString := `rebase-grovyle grovyle
 rebase-treecko treecko`
-	if gotString != wantString {
-		t.Errorf("Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
-	}
+	assert.Equal(suite.T(), gotString, wantString,
+		"Got rebasing-temps file: %v, but want file: %v", gotString, wantString)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Get the oid's of the commits the branches currently point to.
-	treeckoOid := env.repo.LookupBranch("treecko").Target()
-	grovyleOid := env.repo.LookupBranch("grovyle").Target()
+	treeckoOid := suite.repo.LookupBranch("treecko").Target()
+	grovyleOid := suite.repo.LookupBranch("grovyle").Target()
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
-	tempTreeckoOid := env.repo.LookupBranch("rebase-treecko").Target()
-	tempGrovyleOid := env.repo.LookupBranch("rebase-grovyle").Target()
+	tempTreeckoOid := suite.repo.LookupBranch("rebase-treecko").Target()
+	tempGrovyleOid := suite.repo.LookupBranch("rebase-grovyle").Target()
 
 	// The temporary branches should point to the commits where the rebased
 	// branches used to point to.
-	if *treeckoOid != *tempTreeckoOid {
-		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *tempTreeckoOid)
-	}
-	if *grovyleOid != *tempGrovyleOid {
-		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *tempGrovyleOid)
-	}
+	assert.Equal(suite.T(), *treeckoOid, *tempTreeckoOid,
+		"Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *tempTreeckoOid)
+	assert.Equal(suite.T(), *grovyleOid, *tempGrovyleOid,
+		"Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *tempGrovyleOid)
 }
 
 // -------------------------------------------------------------------------- \
@@ -1037,71 +960,63 @@ func TestRebaseTree_MergeConflict_TemporaryBranchesPointToProperCommits(t *testi
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeContinue_ForgetToStageChanges(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_ForgetToStageChanges() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts (but forget to stage changes)
-	env.repo.WriteFile("favorite", "grovyle")
+	suite.repo.WriteFile("favorite", "grovyle")
 
 	// Continue the rebase
-	gotResult := RebaseTreeContinue(env.repo.Repo)
+	gotResult := RebaseTreeContinue(suite.repo.Repo)
 
-	if gotResult.Type != RebaseTreeUnstagedChanges {
-		t.Errorf("Expected operation to result in %q, but it did not", "RebaseTreeUnstagedChanges")
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeUnstagedChanges,
+		"Expected operation to result in %q, but it did not", "RebaseTreeUnstagedChanges")
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeContinue_SuccessfulRebase_SuccessResult(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_SuccessfulRebase_SuccessResult() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts
-	env.repo.WriteFile("favorite", "grovyle")
-	env.repo.StageFiles()
+	suite.repo.WriteFile("favorite", "grovyle")
+	suite.repo.StageFiles()
 
 	// Continue the rebase
-	gotResult := RebaseTreeContinue(env.repo.Repo)
+	gotResult := RebaseTreeContinue(suite.repo.Repo)
 
-	if gotResult.Type != RebaseTreeSuccess {
-		t.Error("Expected operation successful, but it was not")
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeSuccess,
+		"Expected operation successful, but it was not")
 }
 
 // Initial:
@@ -1112,34 +1027,31 @@ func TestRebaseTreeContinue_SuccessfulRebase_SuccessResult(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
-func TestRebaseTreeContinue_SuccessfulRebase_BranchesMoved(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_SuccessfulRebase_BranchesMoved() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts
-	env.repo.WriteFile("favorite", "grovyle")
-	env.repo.StageFiles()
+	suite.repo.WriteFile("favorite", "grovyle")
+	suite.repo.StageFiles()
 
 	// Continue the rebase
-	RebaseTreeContinue(env.repo.Repo)
+	RebaseTreeContinue(suite.repo.Repo)
 	// Clean up extra branches from `git-tree init`.
-	Drop(env.repo.Repo)
+	Drop(suite.repo.Repo)
 
 	// Setup expected
 	expectedRepo := testutil.CreateTestRepo()
@@ -1151,9 +1063,8 @@ func TestRebaseTreeContinue_SuccessfulRebase_BranchesMoved(t *testing.T) {
 	expectedRepo.BranchWithCommit("grovyle")
 	expectedRepo.BranchWithCommit("sceptile")
 
-	if !gitutil.TreesEqual(env.repo.Repo, expectedRepo.Repo) {
-		t.Error("Expected rebased repository to match expected, but it does not")
-	}
+	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+		"Expected rebased repository to match expected, but it does not")
 }
 
 // Initial:
@@ -1164,52 +1075,45 @@ func TestRebaseTreeContinue_SuccessfulRebase_BranchesMoved(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
-func TestRebaseTreeContinue_SuccessfulRebase_DeletesFiles(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_SuccessfulRebase_DeletesFiles() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts
-	env.repo.WriteFile("favorite", "grovyle")
-	env.repo.StageFiles()
+	suite.repo.WriteFile("favorite", "grovyle")
+	suite.repo.StageFiles()
 
 	// Continue the rebase
-	RebaseTreeContinue(env.repo.Repo)
+	RebaseTreeContinue(suite.repo.Repo)
 
 	filename := ".git/tree/rebasing"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-source"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-dest"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-temps"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 }
 
 // Initial:
@@ -1220,80 +1124,71 @@ func TestRebaseTreeContinue_SuccessfulRebase_DeletesFiles(t *testing.T) {
 // Result:
 //
 //	master ─── mew ─── mudkip ─── treecko ─── grovyle ─── sceptile
-func TestRebaseTreeContinue_SuccessfulRebase_DeletesTemporaryBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_SuccessfulRebase_DeletesTemporaryBranches() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts
-	env.repo.WriteFile("favorite", "grovyle")
-	env.repo.StageFiles()
+	suite.repo.WriteFile("favorite", "grovyle")
+	suite.repo.StageFiles()
 
 	// Continue the rebase
-	RebaseTreeContinue(env.repo.Repo)
+	RebaseTreeContinue(suite.repo.Repo)
 
-	tempTreecko := env.repo.LookupBranch("rebase-treecko")
-	tempGrovyle := env.repo.LookupBranch("rebase-grovyle")
+	tempTreecko := suite.repo.LookupBranch("rebase-treecko")
+	tempGrovyle := suite.repo.LookupBranch("rebase-grovyle")
 
-	if tempTreecko != nil {
-		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-treecko")
-	}
-	if tempGrovyle != nil {
-		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
-	}
+	assert.Nil(suite.T(), tempTreecko,
+		"Expected temporary branch %q to not exist, but it does", "rebase-treecko")
+	assert.Nil(suite.T(), tempGrovyle,
+		"Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeContinue_RunIntoNewMergeConflict(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_RunIntoNewMergeConflict() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.CreateAndSwitchBranch("sceptile")
-	env.repo.WriteAndCommitFile("overpowered", "sceptile", "sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	env.repo.WriteAndCommitFile("overpowered", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.CreateAndSwitchBranch("sceptile")
+	suite.repo.WriteAndCommitFile("overpowered", "sceptile", "sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	suite.repo.WriteAndCommitFile("overpowered", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Fix merge conflicts
-	env.repo.WriteFile("favorite", "grovyle")
-	env.repo.StageFiles()
+	suite.repo.WriteFile("favorite", "grovyle")
+	suite.repo.StageFiles()
 
 	// Continue the rebase (but another conflict is expected for `sceptile` branch)
-	gotResult := RebaseTreeContinue(env.repo.Repo)
+	gotResult := RebaseTreeContinue(suite.repo.Repo)
 
-	if gotResult.Type != RebaseTreeMergeConflict {
-		t.Error("Operation did not yield merge conflict, but merge conflict expected")
-	}
+	assert.Equal(suite.T(), gotResult.Type, RebaseTreeMergeConflict,
+		"Operation did not yield merge conflict, but merge conflict expected")
 }
 
 // -------------------------------------------------------------------------- \
@@ -1304,128 +1199,115 @@ func TestRebaseTreeContinue_RunIntoNewMergeConflict(t *testing.T) {
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeAbort_MovesRebasedBranchesToOriginalLocation(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeAbort_MovesRebasedBranchesToOriginalLocation() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Get the oid's of the commits the branches currently point to.
-	treeckoOid := env.repo.LookupBranch("treecko").Target()
-	grovyleOid := env.repo.LookupBranch("grovyle").Target()
+	treeckoOid := suite.repo.LookupBranch("treecko").Target()
+	grovyleOid := suite.repo.LookupBranch("grovyle").Target()
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Abort the rebase
-	RebaseTreeAbort(env.repo.Repo)
+	RebaseTreeAbort(suite.repo.Repo)
 
-	newTreeckoOid := env.repo.LookupBranch("treecko").Target()
-	newGrovyleOid := env.repo.LookupBranch("grovyle").Target()
+	newTreeckoOid := suite.repo.LookupBranch("treecko").Target()
+	newGrovyleOid := suite.repo.LookupBranch("grovyle").Target()
 
 	// After aborting, the rebased branches should point back to their original
 	// commits.
-	if *treeckoOid != *newTreeckoOid {
-		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *newTreeckoOid)
-	}
-	if *grovyleOid != *newGrovyleOid {
-		t.Errorf("Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *newGrovyleOid)
-	}
+	assert.Equal(suite.T(), *treeckoOid, *newTreeckoOid,
+		"Expected temporary branch to point to %v, but it points to %v", *treeckoOid, *newTreeckoOid)
+	assert.Equal(suite.T(), *grovyleOid, *newGrovyleOid,
+		"Expected temporary branch to point to %v, but it points to %v", *grovyleOid, *newGrovyleOid)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeAbort_DeletesFiles(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeAbort_DeletesFiles() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Abort the rebase
-	RebaseTreeAbort(env.repo.Repo)
+	RebaseTreeAbort(suite.repo.Repo)
 
 	filename := ".git/tree/rebasing"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-source"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-dest"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 
 	filename = ".git/tree/rebasing-temps"
-	if env.repo.FileExists(filename) {
-		t.Errorf("Expected file %q not to exist, but it does", filename)
-	}
+	assert.False(suite.T(), suite.repo.FileExists(filename),
+		"Expected file %q not to exist, but it does", filename)
 }
 
 // Initial:
 //
 //	master ─── mew ─┬─ treecko ─── grovyle ─── sceptile
 //	                └─ mudkip
-func TestRebaseTreeAbort_DeletesTemporaryBranches(t *testing.T) {
-	env := setUp(t)
-	defer env.tearDown(t)
-
+func (suite *RebaseTreeTestSuite) TestRebaseTreeAbort_DeletesTemporaryBranches() {
 	// Setup initial - write conflicting contents to the same file.
-	env.repo.BranchWithCommit("mew")
-	env.repo.BranchWithCommit("treecko")
-	env.repo.CreateAndSwitchBranch("grovyle")
-	env.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
-	env.repo.BranchWithCommit("sceptile")
-	env.repo.SwitchBranch("mew")
-	env.repo.CreateAndSwitchBranch("mudkip")
-	env.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
-	Init(env.repo.Repo)
+	suite.repo.BranchWithCommit("mew")
+	suite.repo.BranchWithCommit("treecko")
+	suite.repo.CreateAndSwitchBranch("grovyle")
+	suite.repo.WriteAndCommitFile("favorite", "grovyle", "grovyle")
+	suite.repo.BranchWithCommit("sceptile")
+	suite.repo.SwitchBranch("mew")
+	suite.repo.CreateAndSwitchBranch("mudkip")
+	suite.repo.WriteAndCommitFile("favorite", "mudkip", "mudkip")
+	Init(suite.repo.Repo)
 
 	// Rebase tree
-	source := env.repo.LookupBranch("treecko")
-	dest := env.repo.LookupBranch("mudkip")
-	RebaseTree(env.repo.Repo, source, dest)
+	source := suite.repo.LookupBranch("treecko")
+	dest := suite.repo.LookupBranch("mudkip")
+	RebaseTree(suite.repo.Repo, source, dest)
 
 	// Abort the rebase
-	RebaseTreeAbort(env.repo.Repo)
+	RebaseTreeAbort(suite.repo.Repo)
 
-	tempTreecko := env.repo.LookupBranch("rebase-treecko")
-	tempGrovyle := env.repo.LookupBranch("rebase-grovyle")
+	tempTreecko := suite.repo.LookupBranch("rebase-treecko")
+	tempGrovyle := suite.repo.LookupBranch("rebase-grovyle")
 
-	if tempTreecko != nil {
-		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-treecko")
-	}
-	if tempGrovyle != nil {
-		t.Errorf("Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
-	}
+	assert.Nil(suite.T(), tempTreecko,
+		"Expected temporary branch %q to not exist, but it does", "rebase-treecko")
+	assert.Nil(suite.T(), tempGrovyle,
+		"Expected temporary branch %q to not exist, but it does", "rebase-grovyle")
+}
+
+func TestRebaseTreeTestSuite(t *testing.T) {
+	suite.Run(t, new(RebaseTreeTestSuite))
 }
