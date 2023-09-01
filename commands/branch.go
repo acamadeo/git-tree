@@ -1,10 +1,9 @@
-package branch
+package commands
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/acamadeo/git-tree/commands"
 	"github.com/acamadeo/git-tree/common"
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/store"
@@ -18,7 +17,7 @@ func NewBranchCommand() *cobra.Command {
 		Short: "Add a new branch at current commit",
 		Args:  cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -26,7 +25,7 @@ func NewBranchCommand() *cobra.Command {
 			return validateBranchArgs(context, args)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -39,7 +38,7 @@ func NewBranchCommand() *cobra.Command {
 }
 
 // Add a new branch pointing to the current commit and checkout that branch.
-func runBranch(context *commands.Context, args []string) error {
+func runBranch(context *Context, args []string) error {
 	// Create the new branch.
 	newBranchName := args[0]
 	newBranch, err := context.Repo.CreateBranch(newBranchName, headCommit(context.Repo), false)
@@ -73,7 +72,7 @@ func headCommit(repo *git.Repository) *git.Commit {
 	return gitutil.CommitByReference(repo, headRef)
 }
 
-func validateBranchArgs(context *commands.Context, args []string) error {
+func validateBranchArgs(context *Context, args []string) error {
 	if !common.GitTreeInited(context.Repo.Path()) {
 		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
 	}

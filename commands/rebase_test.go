@@ -1,10 +1,9 @@
-package rebase
+package commands
 
 import (
 	"os"
 	"testing"
 
-	initCmd "github.com/acamadeo/git-tree/commands/init"
 	"github.com/acamadeo/git-tree/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -49,7 +48,7 @@ func (suite *RebaseTestSuite) TestRebase_SourceBranchDoesNotExist() {
 	suite.repo.BranchWithCommit("mudkip")
 
 	// Run git-tree init.
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	cmd := NewRebaseCommand()
 	cmd.SetArgs([]string{"-s", "torchic", "-d", "treecko"})
@@ -71,7 +70,7 @@ func (suite *RebaseTestSuite) TestRebase_DestBranchDoesNotExist() {
 	suite.repo.BranchWithCommit("mudkip")
 
 	// Run git-tree init.
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	cmd := NewRebaseCommand()
 	cmd.SetArgs([]string{"-s", "treecko", "-d", "torchic"})

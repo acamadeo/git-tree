@@ -1,10 +1,9 @@
-package init
+package commands
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/acamadeo/git-tree/commands"
 	"github.com/acamadeo/git-tree/common"
 	"github.com/acamadeo/git-tree/operations"
 	git "github.com/libgit2/git2go/v34"
@@ -29,7 +28,7 @@ func NewInitCommand() *cobra.Command {
 		Use:   "init",
 		Short: "Initializes git-tree for a repository",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -37,7 +36,7 @@ func NewInitCommand() *cobra.Command {
 			return validateInitArgs(context, &opts)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -53,11 +52,11 @@ func NewInitCommand() *cobra.Command {
 	return cmd
 }
 
-func runInit(context *commands.Context, opts *initOptions) error {
+func runInit(context *Context, opts *initOptions) error {
 	return operations.Init(context.Repo, branchesFromNames(context, opts.branches)...)
 }
 
-func validateInitArgs(context *commands.Context, opts *initOptions) error {
+func validateInitArgs(context *Context, opts *initOptions) error {
 	// If the branch map file already exists, then `git tree init` has already
 	// been run.
 	if common.GitTreeInited(context.Repo.Path()) {
@@ -77,7 +76,7 @@ func validateInitArgs(context *commands.Context, opts *initOptions) error {
 	return nil
 }
 
-func validateInitArgless(context *commands.Context) error {
+func validateInitArgless(context *Context) error {
 	head, err := context.Repo.Head()
 	if err != nil {
 		return fmt.Errorf("Cannot find HEAD reference.")
@@ -90,7 +89,7 @@ func validateInitArgless(context *commands.Context) error {
 	return nil
 }
 
-func branchesFromNames(context *commands.Context, branchNames []string) []*git.Branch {
+func branchesFromNames(context *Context, branchNames []string) []*git.Branch {
 	branches := []*git.Branch{}
 	for _, arg := range branchNames {
 		branch, _ := context.Repo.LookupBranch(arg, git.BranchLocal)

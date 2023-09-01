@@ -1,10 +1,9 @@
-package rebase
+package commands
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/acamadeo/git-tree/commands"
 	"github.com/acamadeo/git-tree/common"
 	"github.com/acamadeo/git-tree/operations"
 	git "github.com/libgit2/git2go/v34"
@@ -30,7 +29,7 @@ func NewRebaseCommand() *cobra.Command {
 		Use:   "rebase",
 		Short: "Rebase one branch onto another branch",
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -38,7 +37,7 @@ func NewRebaseCommand() *cobra.Command {
 			return validateRebaseArgs(context, &opts)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			context, err := commands.CreateContext()
+			context, err := CreateContext()
 			if err != nil {
 				return err
 			}
@@ -57,7 +56,7 @@ func NewRebaseCommand() *cobra.Command {
 	return cmd
 }
 
-func validateRebaseArgs(context *commands.Context, opts *rebaseOptions) error {
+func validateRebaseArgs(context *Context, opts *rebaseOptions) error {
 	// TODO: Check that all branches being rebased are tracked by git-tree.
 	if !common.GitTreeInited(context.Repo.Path()) {
 		return errors.New("git-tree is not initialized. Run `git-tree init` to initialize.")
@@ -93,7 +92,7 @@ func validateRegularRebase(repo *git.Repository, opts *rebaseOptions) error {
 }
 
 // Rebases a branch and all its descendants onto another branch.
-func runRebase(context *commands.Context, opts *rebaseOptions) error {
+func runRebase(context *Context, opts *rebaseOptions) error {
 	rebaseArgs := parseRebaseArgs(context.Repo, opts)
 
 	var result operations.RebaseTreeResult

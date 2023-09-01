@@ -1,4 +1,4 @@
-package branch
+package commands
 
 import (
 	"errors"
@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	initCmd "github.com/acamadeo/git-tree/commands/init"
 	"github.com/acamadeo/git-tree/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -25,7 +24,7 @@ func (suite *BranchWithGitInitedTestSuite) SetupTest() {
 	os.Chdir(repo.Repo.Workdir())
 
 	// Run git-tree init.
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	suite.repo = repo
 }
@@ -92,7 +91,7 @@ func (suite *BranchTestSuite) TearDownTest() {
 //	master ─── treecko
 func (suite *BranchTestSuite) TestBranch_NewBranchIsChildOfCurrentBranch() {
 	suite.repo.BranchWithCommit("treecko")
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	cmd := NewBranchCommand()
 	cmd.SetArgs([]string{"grovyle"})
@@ -107,7 +106,7 @@ func (suite *BranchTestSuite) TestBranch_NewBranchIsChildOfCurrentBranch() {
 //	master ─── treecko
 func (suite *BranchTestSuite) TestBranch_HeadIsAtNewBranch() {
 	suite.repo.BranchWithCommit("treecko")
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	cmd := NewBranchCommand()
 	cmd.SetArgs([]string{"grovyle"})
@@ -125,7 +124,7 @@ func (suite *BranchTestSuite) TestBranch_HeadIsAtNewBranch() {
 //	master ─── treecko
 func (suite *BranchTestSuite) TestBranch_UpdatesBranchMapFile() {
 	suite.repo.BranchWithCommit("treecko")
-	initCmd.NewInitCommand().Execute()
+	NewInitCommand().Execute()
 
 	cmd := NewBranchCommand()
 	cmd.SetArgs([]string{"grovyle"})

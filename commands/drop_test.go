@@ -1,4 +1,4 @@
-package drop
+package commands
 
 import (
 	"os"
