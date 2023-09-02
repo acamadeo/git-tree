@@ -40,8 +40,12 @@ append_line() {
   set +e
 }
 
+add_gittreerc() {
+  cp ${INSTALL_PATH}/.gittreerc ~/.gittreerc
+}
+
 add_source_to_bashrc() {
-  append_line 1 "[ -f ${INSTALL_PATH}/.gittreerc ] && source ${INSTALL_PATH}/.gittreerc" ~/.bashrc "${INSTALL_PATH}/.gittreerc"
+  append_line 1 "[ -f ~/.gittreerc ] && source ~/.gittreerc" ~/.bashrc "~/.gittreerc"
 }
 
 print_finish() {
@@ -56,5 +60,6 @@ EOF
 }
 
 
+add_gittreerc
 add_source_to_bashrc
 print_finish

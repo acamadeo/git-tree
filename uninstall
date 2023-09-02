@@ -47,19 +47,23 @@ remove_line() {
   echo
 }
 
+remove_gittreerc() {
+  rm ~/.gittreerc
+}
+
 remove_source_from_bashrc() {
     remove_line ~/.bashrc \
-    "[ -f ${INSTALL_PATH}.bash ] && source ${INSTALL_PATH}/.gittreerc" \
-    "source ${INSTALL_PATH}/.gittreerc"
+    "[ -f ~/.gittreerc ] && source ~/.gittreerc"
 }
 
 uninstall_bash_preexec() {
-    lno="$(\grep -nF "source ~/.bash-preexec.sh" ~/.bashrc | sed 's/:.*//' | tr '\n' ' ')"
-    if [ -z "$lno" ]; then
+  local has_bashrc_preexec=$(grep -c "source ~/.bash-preexec.sh" ~/.bashrc)
+  if [ $has_bashrc_preexec -eq 0 ]; then
         rm ~/.bash-preexec.sh
-    fi
+  fi
 }
 
 
+remove_gittreerc
 remove_source_from_bashrc
 uninstall_bash_preexec
