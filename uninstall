@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+INSTALL_PATH=~/.git-tree
+
+ask() {
+  while true; do
+    read -p "$1 ([y]/n) " -r
+    REPLY=${REPLY:-"y"}
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      return 0
+    elif [[ $REPLY =~ ^[Nn]$ ]]; then
+      return 1
+    fi
+  done
+}
+
+remove_line() {
+  src=$1
+  echo "Remove from $1:"
+
+  shift
+  line_no=1
+  match=0
+  while [ -n "$1" ]; do
+    line=$(sed -n "$line_no,\$p" "$src" | \grep -m1 -nF "$1")
+    if [ $? -ne 0 ]; then
+      shift
+      line_no=1
+      continue
+    fi
+    line_no=$(( $(sed 's/:.*//' <<< "$line") + line_no - 1 ))
+    content=$(sed 's/^[0-9]*://' <<< "$line")
+    match=1
+    echo    "  - Line #$line_no: $content"
+    [ "$content" = "$1" ] || ask "    - Remove?"
+    if [ $? -eq 0 ]; then
+      temp=$(mktemp)
+      awk -v n=$line_no 'NR == n {next} {print}' "$src" > "$temp" &&
+        cat "$temp" > "$src" && rm -f "$temp" || break
+      echo  "      - Removed"
+    else
+      echo  "      - Skipped"
+      line_no=$(( line_no + 1 ))
+    fi
+  done
+  [ $match -eq 0 ] && echo "  - Nothing found"
+  echo
+}
+
+remove_source_from_bashrc() {
+    remove_line ~/.bashrc \
+    "[ -f ${INSTALL_PATH}.bash ] && source ${INSTALL_PATH}/.gittreerc" \
+    "source ${INSTALL_PATH}/.gittreerc"
+}
+
+uninstall_bash_preexec() {
+    lno="$(\grep -nF "source ~/.bash-preexec.sh" ~/.bashrc | sed 's/:.*//' | tr '\n' ' ')"
+    if [ -z "$lno" ]; then
+        rm ~/.bash-preexec.sh
+    fi
+}
+
+
+remove_source_from_bashrc
+uninstall_bash_preexec
