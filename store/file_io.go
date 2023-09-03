@@ -36,6 +36,11 @@ func FileExists(filename string) bool {
 	return err == nil
 }
 
+// Returns true if the file is empty.
+func FileEmpty(filename string) bool {
+	return ReadFile(filename) == ""
+}
+
 // Returns true if the directory exists.
 func DirExists(dir string) bool {
 	_, err := os.Stat(dir)

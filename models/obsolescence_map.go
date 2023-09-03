@@ -13,6 +13,4 @@ type ObsolescenceMapEntry struct {
 	Commit string
 	// Hash of the commit that obsoleted this commit.
 	Obsoleter string
-	// Branch that the obsoleting commit is in.
-	ObsoleterBranch string
 }

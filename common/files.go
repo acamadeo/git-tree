@@ -43,6 +43,10 @@ func BranchMapPath(gitPath string) string {
 	return GitTreeFilePath(gitPath, BranchMap)
 }
 
+func ObsoleteMapPath(gitPath string) string {
+	return GitTreeFilePath(gitPath, ObsoleteMap)
+}
+
 func RebasingPath(gitPath string) string {
 	return GitTreeFilePath(gitPath, RebaseInProgress)
 }
