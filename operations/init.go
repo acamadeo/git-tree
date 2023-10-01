@@ -1,7 +1,9 @@
 package operations
 
 import (
+	"embed"
 	"fmt"
+	"os"
 
 	"github.com/acamadeo/git-tree/common"
 	gitutil "github.com/acamadeo/git-tree/git"
@@ -9,6 +11,12 @@ import (
 	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
+
+const postRewriteFilename = "scripts/git-tree-post-rewrite.sh"
+const postCommitFilename = "scripts/git-tree-post-commit.sh"
+
+//go:embed scripts/*
+var gitHookScripts embed.FS
 
 // Initialize git-tree for the given repository.
 //
@@ -30,6 +38,9 @@ func Init(repo *git.Repository, branches ...*git.Branch) error {
 	// file.
 	branchMap := models.BranchMapFromRepo(repo, rootBranch, branches)
 	store.WriteBranchMap(branchMap, common.BranchMapPath(repo.Path()))
+
+	// Install `post-commit` and `post-rewrite` git-hooks.
+	installGitHooks(repo)
 
 	return nil
 }
@@ -54,4 +65,30 @@ func branchOids(branches []*git.Branch) []*git.Oid {
 		oids = append(oids, branch.Target())
 	}
 	return oids
+}
+
+func installGitHooks(repo *git.Repository) {
+	// `post-rewrite` hook
+	hookFile := repo.Path() + "hooks/post-rewrite"
+	destFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
+	installGitHook(hookFile, postRewriteFilename, destFilename)
+
+	// `post-commit` hook
+	hookFile = repo.Path() + "hooks/post-commit"
+	destFilename = repo.Path() + "hooks/git-tree-post-commit.sh"
+	installGitHook(hookFile, postCommitFilename, destFilename)
+}
+
+func installGitHook(hookFile string, sourceFilename string, destFilename string) {
+	// Copy `scripts/git-tree-post-{}.sh` into `.git/hooks/`.
+	sourceFile, _ := gitHookScripts.ReadFile(sourceFilename)
+	store.OverwriteFile(destFilename, string(sourceFile))
+
+	// Call `git-tree-post-{}.sh` in the `post-{}` hook.
+	contents := fmt.Sprintf(`%s "$@"`, destFilename)
+	store.AppendToFile(hookFile, contents)
+
+	// Mark `git-tree-post-{}.sh` and `.git/hooks/post-{}` as executable.
+	os.Chmod(destFilename, 0755)
+	os.Chmod(hookFile, 0755)
 }

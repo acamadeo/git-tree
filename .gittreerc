@@ -2,54 +2,8 @@
 
 INSTALL_PATH=~/.git-tree
 
-install_bash_preexec() {
-    local has_bashrc_preexec=$(grep -c "source ~/.bash-preexec.sh" ~/.bashrc)
-    if [ $has_bashrc_preexec -eq 0 ]; then
-        if [ ! -f ~/.bash-preexec.sh ]; then
-            curl https://raw.githubusercontent.com/rcaloras/bash-preexec/master/bash-preexec.sh -so ~/.bash-preexec.sh
-        fi
-        source ~/.bash-preexec.sh
-    fi
-}
-
-_gittree_git_command=false
-
-git_intercept_preexec() {
-    command=($1)
-    if [ "${command[0]}" != "git" ]; then
-        _gittree_git_command=false && return
-    fi
-
-    _gittree_git_command=true
-    case ${command[1]} in
-    commit|rebase)
-        # TODO: Execute git-tree code...
-        echo Insert git-tree code...
-        ;;
-    *)
-        ;;
-    esac
-}
-
-git_intercept_precmd() {
-    [ ${_gittree_git_command} = false ] && return
-
-    # Print exit status
-    local status="$?"
-    echo ${status}
-
-    # TODO: Execute git-tree code... (e.g. commit changes from `preexec` if the
-    # git command was successful)
-}
-
-
 # Add git-tree to PATH
 # --------------------
 if [[ ! "$PATH" == *$INSTALL_PATH* ]]; then
     PATH="${PATH:+${PATH}:}$INSTALL_PATH"
 fi
-
-install_bash_preexec
-
-preexec_functions+=(git_intercept_preexec)
-precmd_functions+=(git_intercept_precmd)

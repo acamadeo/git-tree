@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Replaces the contents of file `filename` with `contents`.
@@ -30,6 +31,12 @@ func ReadFile(filename string) string {
 	return string(bytes)
 }
 
+// Add a newline and append `contents` to the file.
+func AppendToFile(filename string, contents string) {
+	existingContents := ReadFile(filename)
+	OverwriteFile(filename, existingContents+"\n"+contents)
+}
+
 // Returns true if the file exists.
 func FileExists(filename string) bool {
 	_, err := os.Stat(filename)
@@ -45,4 +52,14 @@ func FileEmpty(filename string) bool {
 func DirExists(dir string) bool {
 	_, err := os.Stat(dir)
 	return err == nil
+}
+
+func FileContainsLine(filename string, line string) bool {
+	contents := ReadFile(filename)
+	for _, l := range strings.Split(contents, "\n") {
+		if l == line {
+			return true
+		}
+	}
+	return false
 }
