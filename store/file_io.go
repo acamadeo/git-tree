@@ -54,6 +54,7 @@ func DirExists(dir string) bool {
 	return err == nil
 }
 
+// Returns true if the file contains the given line exactly.
 func FileContainsLine(filename string, line string) bool {
 	contents := ReadFile(filename)
 	for _, l := range strings.Split(contents, "\n") {
@@ -62,4 +63,19 @@ func FileContainsLine(filename string, line string) bool {
 		}
 	}
 	return false
+}
+
+// Removes any lines matching `line` in the file.
+func DeleteLineInFile(filename string, line string) {
+	lines := []string{}
+
+	contents := ReadFile(filename)
+	for _, l := range strings.Split(contents, "\n") {
+		if l == line {
+			continue
+		}
+		lines = append(lines, l)
+	}
+
+	OverwriteFile(filename, strings.Join(lines, "\n"))
 }

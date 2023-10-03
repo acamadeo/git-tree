@@ -27,5 +27,29 @@ func Drop(repo *git.Repository) error {
 		return fmt.Errorf("Could not delete git-tree files: %s.", err.Error())
 	}
 
+	// Remove `post-commit` and `post-rewrite` git-hooks for git-tree.
+	uninstallGitHooks(repo)
+
 	return nil
+}
+
+func uninstallGitHooks(repo *git.Repository) {
+	// `post-rewrite` hook
+	hookFile := repo.Path() + "hooks/post-rewrite"
+	hookImplFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
+	uninstallGitHook(hookFile, hookImplFilename)
+
+	// `post-commit` hook
+	hookFile = repo.Path() + "hooks/post-commit"
+	hookImplFilename = repo.Path() + "hooks/git-tree-post-commit.sh"
+	uninstallGitHook(hookFile, hookImplFilename)
+}
+
+func uninstallGitHook(hookFile string, hookImplFilename string) {
+	// Delete `.git/hooks/git-tree-post-{}.sh`.
+	os.Remove(hookImplFilename)
+
+	// Delete call to `git-tree-post-{}.sh` in the `post-{}` hook.
+	scriptCall := fmt.Sprintf(`%s "$@"`, hookImplFilename)
+	store.DeleteLineInFile(hookFile, scriptCall)
 }
