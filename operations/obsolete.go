@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"os"
 	"strings"
 
 	"github.com/acamadeo/git-tree/common"
@@ -10,7 +11,7 @@ import (
 )
 
 // -------------------------------------------------------------------------- \
-// ObsoleteAmend                                                             |
+// ObsoleteAmend                                                              |
 // -------------------------------------------------------------------------- /
 
 func ObsoleteAmend(repo *git.Repository, lines []string) error {
@@ -32,16 +33,40 @@ func ObsoleteRebase(repo *git.Repository, lines []string) error {
 }
 
 // -------------------------------------------------------------------------- \
-// ObsoleteCommit                                                             |
+// ObsoletePreCommit                                                          |
+// -------------------------------------------------------------------------- /
+
+func ObsoletePreCommit(repo *git.Repository) error {
+	// Store the parent of the commit at HEAD.
+	headRef, _ := repo.Head()
+	headCommit, _ := repo.LookupCommit(headRef.Target())
+
+	contents := headCommit.ParentId(0).String()
+	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), contents)
+	return nil
+}
+
+// -------------------------------------------------------------------------- \
+// ObsoletePostCommit                                                         |
 // -------------------------------------------------------------------------- /
 
 // TODO: Only obsolete commits if the commit has descendants. Come back to this
 // after creating the RepoTree struct.
-func ObsoleteCommit(repo *git.Repository) error {
-	// Mark the commit at HEAD as obsoleting its parent.
+func ObsoletePostCommit(repo *git.Repository) error {
 	headRef, _ := repo.Head()
 	headCommit, _ := repo.LookupCommit(headRef.Target())
 
+	preCommitParentPath := common.PreCommitParentPath(repo.Path())
+	preCommitParent := store.ReadFile(preCommitParentPath)
+	defer os.Remove(preCommitParentPath)
+
+	// If the parent of HEAD are the same pre- and post-commit, this was
+	// `git commit --amend`. Ignore.
+	if headCommit.ParentId(0).String() == preCommitParent {
+		return nil
+	}
+
+	// Mark the commit at HEAD as obsoleting its parent.
 	entry := models.ObsolescenceMapEntry{
 		Commit:    headCommit.ParentId(0).String(),
 		Obsoleter: headCommit.Id().String(),

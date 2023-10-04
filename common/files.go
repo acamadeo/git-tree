@@ -7,6 +7,7 @@ type GitTreeFile int
 const (
 	BranchMap GitTreeFile = iota
 	ObsoleteMap
+	PreCommitParent
 	RebaseInProgress
 	RebaseSource
 	RebaseDest
@@ -16,6 +17,7 @@ const (
 var gitTreeFileNames = map[GitTreeFile]string{
 	BranchMap:               "branches",
 	ObsoleteMap:             "obsmap",
+	PreCommitParent:         "pre-commit-parent",
 	RebaseInProgress:        "rebasing",
 	RebaseSource:            "rebasing-source",
 	RebaseDest:              "rebasing-dest",
@@ -45,6 +47,10 @@ func BranchMapPath(gitPath string) string {
 
 func ObsoleteMapPath(gitPath string) string {
 	return GitTreeFilePath(gitPath, ObsoleteMap)
+}
+
+func PreCommitParentPath(gitPath string) string {
+	return GitTreeFilePath(gitPath, PreCommitParent)
 }
 
 func RebasingPath(gitPath string) string {

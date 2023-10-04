@@ -38,7 +38,8 @@ func validateObsoleteArgs(args []string) error {
 		if len(args) != 3 {
 			return fmt.Errorf("accepts 3 arg(s), received %d", len(args))
 		}
-	case "commit":
+	case "pre-commit":
+	case "post-commit":
 		if len(args) != 2 {
 			return fmt.Errorf("accepts 2 arg(s), received %d", len(args))
 		}
@@ -54,8 +55,10 @@ func runObsolete(context *Context, args []string) error {
 		return operations.ObsoleteAmend(context.Repo, strings.Split(args[2], "\n"))
 	case "rebase":
 		return operations.ObsoleteRebase(context.Repo, strings.Split(args[2], "\n"))
-	case "commit":
-		return operations.ObsoleteCommit(context.Repo)
+	case "pre-commit":
+		return operations.ObsoletePreCommit(context.Repo)
+	case "post-commit":
+		return operations.ObsoletePostCommit(context.Repo)
 	default:
 		return fmt.Errorf("Obsolescence not supported for operation %q.", command)
 	}

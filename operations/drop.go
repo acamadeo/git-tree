@@ -39,6 +39,11 @@ func uninstallGitHooks(repo *git.Repository) {
 	hookImplFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
 	uninstallGitHook(hookFile, hookImplFilename)
 
+	// `pre-commit` hook
+	hookFile = repo.Path() + "hooks/pre-commit"
+	hookImplFilename = repo.Path() + "hooks/git-tree-pre-commit.sh"
+	uninstallGitHook(hookFile, hookImplFilename)
+
 	// `post-commit` hook
 	hookFile = repo.Path() + "hooks/post-commit"
 	hookImplFilename = repo.Path() + "hooks/git-tree-post-commit.sh"

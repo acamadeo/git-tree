@@ -13,6 +13,7 @@ import (
 )
 
 const postRewriteFilename = "scripts/git-tree-post-rewrite.sh"
+const preCommitFilename = "scripts/git-tree-pre-commit.sh"
 const postCommitFilename = "scripts/git-tree-post-commit.sh"
 
 //go:embed scripts/*
@@ -72,6 +73,11 @@ func installGitHooks(repo *git.Repository) {
 	hookFile := repo.Path() + "hooks/post-rewrite"
 	destFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
 	installGitHook(hookFile, postRewriteFilename, destFilename)
+
+	// `pre-commit` hook
+	hookFile = repo.Path() + "hooks/pre-commit"
+	destFilename = repo.Path() + "hooks/git-tree-pre-commit.sh"
+	installGitHook(hookFile, preCommitFilename, destFilename)
 
 	// `post-commit` hook
 	hookFile = repo.Path() + "hooks/post-commit"
