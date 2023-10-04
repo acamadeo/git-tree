@@ -1,6 +1,7 @@
 package store
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,15 +14,19 @@ func OverwriteFile(filename string, contents string) {
 	// Make the file's parent directory (no-op if directory already exists).
 	dir := filepath.Dir(filename)
 	os.MkdirAll(dir, os.ModePerm)
+	mode := fs.FileMode(0664)
 
 	// Delete the file if it already exists.
-	_, err := os.Open(filename)
+	existingFile, err := os.Open(filename)
 	if err == nil {
+		stat, _ := existingFile.Stat()
+		mode = stat.Mode()
 		os.Remove(filename)
 	}
 
 	newFile, _ := os.Create(filename)
 	newFile.WriteString(contents)
+	newFile.Chmod(mode)
 	newFile.Close()
 }
 
