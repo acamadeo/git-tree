@@ -7,6 +7,13 @@ import (
 	"github.com/acamadeo/git-tree/models"
 )
 
+var hookTypeStrings = map[models.HookType]string{
+	models.HookTypeUnknown:   "unknown",
+	models.PostRewriteAmend:  "post-rewrite.amend",
+	models.PostRewriteRebase: "post-rewrite.rebase",
+	models.PostCommit:        "post-commit",
+}
+
 // Read obsolescence map file
 func ReadObsolescenceMap(filepath string) *models.ObsolescenceMap {
 	obsmap := models.ObsolescenceMap{}
@@ -16,10 +23,12 @@ func ReadObsolescenceMap(filepath string) *models.ObsolescenceMap {
 		lineParts := strings.Fields(line)
 		oldHash := lineParts[0]
 		newHash := lineParts[1]
+		hookType := lineParts[2]
 
 		obsmap.Entries = append(obsmap.Entries, models.ObsolescenceMapEntry{
 			Commit:    oldHash,
 			Obsoleter: newHash,
+			HookType:  hookTypeFromString(hookType),
 		})
 	}
 
@@ -47,9 +56,18 @@ func obsolescenceMapString(obsmap *models.ObsolescenceMap) string {
 	output := []string{}
 
 	for _, entry := range obsmap.Entries {
-		entryString := fmt.Sprintf("%s %s", entry.Commit, entry.Obsoleter)
+		entryString := fmt.Sprintf("%s %s %s", entry.Commit, entry.Obsoleter, hookTypeStrings[entry.HookType])
 		output = append(output, entryString)
 	}
 
 	return strings.Join(output, "\n")
+}
+
+func hookTypeFromString(value string) models.HookType {
+	for hookType, str := range hookTypeStrings {
+		if str == value {
+			return hookType
+		}
+	}
+	return models.HookTypeUnknown
 }

@@ -18,7 +18,7 @@ func ObsoleteAmend(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}
-	return writeToObsoleteMap(repo, lines)
+	return writeToObsoleteMap(repo, lines, models.PostRewriteAmend)
 }
 
 // -------------------------------------------------------------------------- \
@@ -29,7 +29,7 @@ func ObsoleteRebase(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}
-	return writeToObsoleteMap(repo, lines)
+	return writeToObsoleteMap(repo, lines, models.PostRewriteRebase)
 }
 
 // -------------------------------------------------------------------------- \
@@ -70,6 +70,7 @@ func ObsoletePostCommit(repo *git.Repository) error {
 	entry := models.ObsolescenceMapEntry{
 		Commit:    headCommit.ParentId(0).String(),
 		Obsoleter: headCommit.Id().String(),
+		HookType:  models.PostCommit,
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
@@ -93,7 +94,7 @@ func validateObsoleteLines(repo *git.Repository, lines []string) error {
 	return nil
 }
 
-func writeToObsoleteMap(repo *git.Repository, lines []string) error {
+func writeToObsoleteMap(repo *git.Repository, lines []string, hookType models.HookType) error {
 	obsmapEntries := []models.ObsolescenceMapEntry{}
 
 	for _, line := range lines {
@@ -104,6 +105,7 @@ func writeToObsoleteMap(repo *git.Repository, lines []string) error {
 		obsmapEntries = append(obsmapEntries, models.ObsolescenceMapEntry{
 			Commit:    oldHash,
 			Obsoleter: newHash,
+			HookType:  hookType,
 		})
 	}
 
