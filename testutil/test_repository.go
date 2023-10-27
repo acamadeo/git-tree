@@ -120,6 +120,19 @@ func (t *TestRepository) WriteAndCommitFile(filename string, contents string, me
 	t.WriteCommit(message)
 }
 
+// Amend the commit at HEAD with a new commit message.
+func (t *TestRepository) AmendCommit(message string) {
+	headRef, _ := t.Repo.Head()
+	headCommit, _ := t.Repo.LookupCommit(headRef.Target())
+
+	index, _ := t.Repo.Index()
+	treeOid, _ := index.WriteTree()
+	index.Write()
+	tree, _ := t.Repo.LookupTree(treeOid)
+
+	headCommit.Amend("HEAD", nil, nil, message, tree)
+}
+
 // Moved HEAD to the commit with message `message`. Assumes a single commit with
 // the specified message exists.
 func (t *TestRepository) SwitchCommit(message string) {
