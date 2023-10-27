@@ -16,6 +16,7 @@ var InitCmd = commands.NewInitCommand()
 var DropCmd = commands.NewDropCommand()
 var BranchCmd = commands.NewBranchCommand()
 var RebaseCmd = commands.NewRebaseCommand()
+var EvolveCmd = commands.NewEvolveCommand()
 
 // Triggered using `post-commit` and `post-rewrite` git-hooks.
 // https://www.git-scm.com/docs/githooks
@@ -27,7 +28,7 @@ var hiddenCommands = map[string]*cobra.Command{
 
 func init() {
 	// Add all the commands.
-	RootCmd.AddCommand(InitCmd, DropCmd, BranchCmd, RebaseCmd)
+	RootCmd.AddCommand(InitCmd, DropCmd, BranchCmd, RebaseCmd, EvolveCmd)
 }
 
 func main() {

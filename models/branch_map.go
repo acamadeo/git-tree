@@ -10,6 +10,11 @@ import (
 type BranchList []*git.Branch
 
 // Represents the parent-children relationships between branches.
+//
+// TODO: Consider deleting this struct, since we can get this information now by
+// creating a RepoTree.
+//   - Instead of the branchMap, all we would need to persist is the name of the
+//     root branch and all the participating branches.
 type BranchMap struct {
 	Root     *git.Branch
 	Children map[*git.Branch]BranchList
@@ -159,6 +164,22 @@ func (b *BranchMap) FindBranch(branchName string) *git.Branch {
 		}
 	}
 	return nil
+}
+
+func (b *BranchMap) ListBranches() []*git.Branch {
+	branchNames := map[string]bool{}
+	for branch, children := range b.Children {
+		branchNames[gitutil.BranchName(branch)] = true
+		for _, child := range children {
+			branchNames[gitutil.BranchName(child)] = true
+		}
+	}
+
+	branches := []*git.Branch{}
+	for branchName := range branchNames {
+		branches = append(branches, b.FindBranch(branchName))
+	}
+	return branches
 }
 
 // Returns the parent of a branch.
