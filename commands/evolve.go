@@ -47,7 +47,7 @@ func validateEvolve(context *Context) error {
 }
 
 func runEvolve(context *Context) error {
-	obsmap := store.ReadObsolescenceMap(common.ObsoleteMapPath(context.Repo.Path()))
+	obsmap := store.ReadObsolescenceMap(context.Repo, common.ObsoleteMapPath(context.Repo.Path()))
 
 	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
 	commits := gitutil.LocalCommitsFromBranches(context.Repo, branchMap.Root, branchMap.ListBranches()...)
@@ -65,13 +65,13 @@ func runEvolve(context *Context) error {
 
 // Returns true if any obsolete commits are found among the `localCommits`.
 func anyObsoleteCommits(obsmap *models.ObsolescenceMap, localCommits []*git.Commit) bool {
-	localCommitOids := map[string]bool{}
+	localCommitOids := map[git.Oid]bool{}
 	for _, commit := range localCommits {
-		localCommitOids[commit.Id().String()] = true
+		localCommitOids[*commit.Id()] = true
 	}
 
 	for _, entry := range obsmap.Entries {
-		if _, ok := localCommitOids[entry.Commit]; ok {
+		if _, ok := localCommitOids[*entry.Commit.Id()]; ok {
 			return true
 		}
 	}

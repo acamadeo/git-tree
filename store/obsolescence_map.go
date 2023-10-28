@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/acamadeo/git-tree/models"
+	git "github.com/libgit2/git2go/v34"
 )
 
 var hookTypeStrings = map[models.HookType]string{
@@ -15,7 +16,7 @@ var hookTypeStrings = map[models.HookType]string{
 }
 
 // Read obsolescence map file
-func ReadObsolescenceMap(filepath string) *models.ObsolescenceMap {
+func ReadObsolescenceMap(repo *git.Repository, filepath string) *models.ObsolescenceMap {
 	obsmap := models.ObsolescenceMap{}
 
 	lines := strings.Split(ReadFile(filepath), "\n")
@@ -25,9 +26,15 @@ func ReadObsolescenceMap(filepath string) *models.ObsolescenceMap {
 		newHash := lineParts[1]
 		hookType := lineParts[2]
 
+		commitOid, _ := git.NewOid(oldHash)
+		commit, _ := repo.LookupCommit(commitOid)
+
+		obsoleterOid, _ := git.NewOid(newHash)
+		obsoleter, _ := repo.LookupCommit(obsoleterOid)
+
 		obsmap.Entries = append(obsmap.Entries, models.ObsolescenceMapEntry{
-			Commit:    oldHash,
-			Obsoleter: newHash,
+			Commit:    commit,
+			Obsoleter: obsoleter,
 			HookType:  hookTypeFromString(hookType),
 		})
 	}
@@ -41,11 +48,11 @@ func WriteObsolescenceMap(obsmap *models.ObsolescenceMap, filepath string) {
 }
 
 // Append entries to obsolescence map file
-func AppendToObsolescenceMap(filepath string, entries ...models.ObsolescenceMapEntry) {
+func AppendToObsolescenceMap(repo *git.Repository, filepath string, entries ...models.ObsolescenceMapEntry) {
 	obsmap := &models.ObsolescenceMap{}
 
 	if FileExists(filepath) {
-		obsmap = ReadObsolescenceMap(filepath)
+		obsmap = ReadObsolescenceMap(repo, filepath)
 	}
 
 	obsmap.Entries = append(obsmap.Entries, entries...)
@@ -56,7 +63,10 @@ func obsolescenceMapString(obsmap *models.ObsolescenceMap) string {
 	output := []string{}
 
 	for _, entry := range obsmap.Entries {
-		entryString := fmt.Sprintf("%s %s %s", entry.Commit, entry.Obsoleter, hookTypeStrings[entry.HookType])
+		entryString := fmt.Sprintf("%s %s %s",
+			entry.Commit.Id().String(),
+			entry.Obsoleter.Id().String(),
+			hookTypeStrings[entry.HookType])
 		output = append(output, entryString)
 	}
 

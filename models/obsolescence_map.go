@@ -1,9 +1,8 @@
 package models
 
-// TODO: This and BranchMap should probably get moved under store/
-//
-// Models should contain the internal representation of the ObsolescenceMap
-// and BranchMap.
+import git "github.com/libgit2/git2go/v34"
+
+// Represents each obsolete commit and the commit that obsoleted it.
 type ObsolescenceMap struct {
 	Entries []ObsolescenceMapEntry
 }
@@ -18,10 +17,10 @@ const (
 )
 
 type ObsolescenceMapEntry struct {
-	// Hash of the commit that has been obsoleted.
-	Commit string
-	// Hash of the commit that obsoleted this commit.
-	Obsoleter string
+	// The commit that has been obsoleted.
+	Commit *git.Commit
+	// The commit that obsoleted this entry's commit.
+	Obsoleter *git.Commit
 	// Which git-hook added this entry.
 	HookType HookType
 }

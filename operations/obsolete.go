@@ -68,13 +68,13 @@ func ObsoletePostCommit(repo *git.Repository) error {
 
 	// Mark the commit at HEAD as obsoleting its parent.
 	entry := models.ObsolescenceMapEntry{
-		Commit:    headCommit.ParentId(0).String(),
-		Obsoleter: headCommit.Id().String(),
+		Commit:    headCommit.Parent(0),
+		Obsoleter: headCommit,
 		HookType:  models.PostCommit,
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendToObsolescenceMap(obsmapFile, entry)
+	store.AppendToObsolescenceMap(repo, obsmapFile, entry)
 	return nil
 }
 
@@ -102,14 +102,20 @@ func writeToObsoleteMap(repo *git.Repository, lines []string, hookType models.Ho
 		oldHash := lineParts[0]
 		newHash := lineParts[1]
 
+		commitOid, _ := git.NewOid(oldHash)
+		commit, _ := repo.LookupCommit(commitOid)
+
+		obsoleterOid, _ := git.NewOid(newHash)
+		obsoleter, _ := repo.LookupCommit(obsoleterOid)
+
 		obsmapEntries = append(obsmapEntries, models.ObsolescenceMapEntry{
-			Commit:    oldHash,
-			Obsoleter: newHash,
+			Commit:    commit,
+			Obsoleter: obsoleter,
 			HookType:  hookType,
 		})
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendToObsolescenceMap(obsmapFile, obsmapEntries...)
+	store.AppendToObsolescenceMap(repo, obsmapFile, obsmapEntries...)
 	return nil
 }
