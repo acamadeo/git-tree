@@ -29,9 +29,10 @@ func (l commitList) add(oid git.Oid) commitList {
 // descendancy graph. It is best to populate it early and use it for the
 // remainder of the operation.
 //
-// TODO: Allow callers to not read the entire commit history into memory -- stop
-// at `gitTreeRoot`. Tests, however, need to read the entire commit history for
-// equality comparisons.
+// The tree is sorted during construction so that it is easy to compare whether
+// two RepoTree's are identical. They are sorted as follows:
+//   - Sort the children of each commit by Oid value.
+//   - Sort the names of the branches associated with a particular commit.
 //
 // TODO: Add support for merge commits.
 type RepoTree struct {
@@ -153,7 +154,7 @@ func createBranches(repo *git.Repository, root *git.Branch, branches ...*git.Bra
 // `branches` are provided, the RepoTree will include commits from *all local branches*.
 // If `branches` are provided, it is assumed that `root` is nil or an ancestor of
 // all `branches`.
-func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Branch) RepoTree {
+func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Branch) *RepoTree {
 	var rootOid git.Oid
 	if root != nil {
 		rootOid = *root.Target()
@@ -165,7 +166,7 @@ func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Bra
 		branches = AllLocalBranches(repo)
 	}
 
-	return RepoTree{
+	return &RepoTree{
 		repo:           repo,
 		root:           rootOid,
 		commitChildren: createCommitChildren(repo, root, branches...),
@@ -209,20 +210,9 @@ func isIdentical(a *RepoTree, b *RepoTree) bool {
 //
 // Equality requires branch names and commit messages to be the same across
 // repo's.
-//
-// TODO: Pass in `RepoTree`. Callers should build the `RepoTree` themselves.
-func TreesEqual(a *git.Repository, b *git.Repository) bool {
-	// We must check whether the repositories are isomorphic.
-	//
-	// Create a commit descendancy tree for each repository. Address isomorphism
-	// by sorting each tree:
-	//  * Sort the children of each commit by Oid value.
-	//  * Sort the names of the branches associated with a particular commit.
-	repoTreeA := CreateRepoTree(a, nil)
-	repoTreeB := CreateRepoTree(b, nil)
-
+func TreesEqual(a *RepoTree, b *RepoTree) bool {
 	// Run through both trees, confirming that they are identical.
-	return isIdentical(&repoTreeA, &repoTreeB)
+	return isIdentical(a, b)
 }
 
 func stringListEqual(a []string, b []string) bool {

@@ -121,7 +121,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOneChild() {
 	expectedRepo.BranchWithCommit("mudkip")
 	expectedRepo.BranchWithCommit("treecko")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -158,7 +160,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseMultipleChildren() {
 	expectedRepo.BranchWithCommit("treecko")
 	expectedRepo.BranchWithCommit("grovyle")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -195,7 +199,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOntoNestedBranch() {
 	expectedRepo.BranchWithCommit("grovyle")
 	expectedRepo.BranchWithCommit("mudkip")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -232,7 +238,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_ForkBranchLine() {
 	expectedRepo.SwitchBranch("mew")
 	expectedRepo.BranchWithCommit("mudkip")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -276,7 +284,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_MultipleRebases_Fork() {
 	expectedRepo.SwitchBranch("eevee")
 	expectedRepo.BranchWithCommit("flareon")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -320,7 +330,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_MultipleRebases_Merge() {
 	expectedRepo.BranchWithCommit("jolteon")
 	expectedRepo.BranchWithCommit("vaporeon")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -355,7 +367,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_RebaseOntoFirstBranch() {
 	expectedRepo.BranchWithCommit("treecko")
 	expectedRepo.BranchWithCommit("grovyle")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -409,7 +423,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_KirliaOntoGlalie() {
 	expectedRepo.SwitchBranch("kirlia")
 	expectedRepo.BranchWithCommit("gallade")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -461,7 +477,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_SnoruntOntoGardevoir() {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -519,7 +537,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_KirliaOntoSnorunt() {
 	expectedRepo.SwitchBranch("kirlia")
 	expectedRepo.BranchWithCommit("gallade")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -574,7 +594,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_SnoruntOntoKirlia() {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -629,7 +651,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_GlalieOntoKirlia() {
 	expectedRepo.BranchWithCommit("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -684,7 +708,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_GardevoirOntoSnorunt() {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("gardevoir")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -737,7 +763,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_GlalieOntoGardevoir() {
 	expectedRepo.BranchWithCommit("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -791,7 +819,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTree_GardevoirOntoGlalie() {
 	expectedRepo.SwitchBranch("snorunt")
 	expectedRepo.BranchWithCommit("froslass")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
@@ -1063,7 +1093,9 @@ func (suite *RebaseTreeTestSuite) TestRebaseTreeContinue_SuccessfulRebase_Branch
 	expectedRepo.BranchWithCommit("grovyle")
 	expectedRepo.BranchWithCommit("sceptile")
 
-	assert.True(suite.T(), gitutil.TreesEqual(suite.repo.Repo, expectedRepo.Repo),
+	gotRepoTree := gitutil.CreateRepoTree(suite.repo.Repo, nil)
+	expectedRepoTree := gitutil.CreateRepoTree(expectedRepo.Repo, nil)
+	assert.True(suite.T(), gitutil.TreesEqual(gotRepoTree, expectedRepoTree),
 		"Expected rebased repository to match expected, but it does not")
 }
 
