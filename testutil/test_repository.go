@@ -136,7 +136,7 @@ func (t *TestRepository) AmendCommit(message string) {
 // Moved HEAD to the commit with message `message`. Assumes a single commit with
 // the specified message exists.
 func (t *TestRepository) SwitchCommit(message string) {
-	allCommits := gitutil.AllLocalCommits(t.Repo)
+	allCommits := gitutil.AllLocalCommits(t.Repo, nil)
 	for _, commit := range allCommits {
 		if commit.Message() == message {
 			gitutil.CheckoutCommit(t.Repo, commit)

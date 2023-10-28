@@ -11,15 +11,29 @@ func CommitByReference(repo *git.Repository, ref *git.Reference) *git.Commit {
 	return commit
 }
 
-func AllLocalCommits(repo *git.Repository) []*git.Commit {
-	// Create a walk that will include the tip commit of every local branch.
-	revWalk := InitWalkWithAllBranches(repo)
+// Returns a list of all local commits up to and including the `root`.
+//
+// If `root` is nil, it returns a list of all local commits in the entire
+// history.
+func AllLocalCommits(repo *git.Repository, root *git.Branch) []*git.Commit {
+	return LocalCommitsFromBranches(repo, root, AllLocalBranches(repo)...)
+}
+
+// Returns a list of all commits up to and including the `root` that are ancestors
+// of the provided `branches`.
+//
+// If `root` is nil, the result will include commits from the entire history.
+func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches ...*git.Branch) []*git.Commit {
+	// Create a walk that will include the tip commit of each provided branch.
+	revWalk := InitWalkWithBranches(repo, branches...)
 
 	// Perform the walk, creating a set of every commit oid.
 	commitOidsSet := map[git.Oid]bool{}
 	revWalk.Iterate(func(commit *git.Commit) bool {
 		commitOidsSet[*commit.Id()] = true
-		return true
+
+		// Stop adding commits once we hit `root` (if specified).
+		return root == nil || *root.Target() != *commit.Id()
 	})
 
 	// Lookup each commit in the set.
