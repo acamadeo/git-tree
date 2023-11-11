@@ -12,6 +12,7 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
+const preRebaseFilename = "scripts/git-tree-pre-rebase.sh"
 const postRewriteFilename = "scripts/git-tree-post-rewrite.sh"
 const preCommitFilename = "scripts/git-tree-pre-commit.sh"
 const postCommitFilename = "scripts/git-tree-post-commit.sh"
@@ -69,9 +70,14 @@ func branchOids(branches []*git.Branch) []*git.Oid {
 }
 
 func installGitHooks(repo *git.Repository) {
+	// `pre-rebase` hook
+	hookFile := repo.Path() + "hooks/pre-rebase"
+	destFilename := repo.Path() + "hooks/git-tree-pre-rebase.sh"
+	installGitHook(hookFile, preRebaseFilename, destFilename)
+
 	// `post-rewrite` hook
-	hookFile := repo.Path() + "hooks/post-rewrite"
-	destFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
+	hookFile = repo.Path() + "hooks/post-rewrite"
+	destFilename = repo.Path() + "hooks/git-tree-post-rewrite.sh"
 	installGitHook(hookFile, postRewriteFilename, destFilename)
 
 	// `pre-commit` hook

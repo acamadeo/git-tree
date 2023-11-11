@@ -34,8 +34,13 @@ func (suite *InitTestSuite) TestInit_CreatesBranchMapFile() {
 func (suite *InitTestSuite) TestInit_ModifiesGitHooks() {
 	Init(suite.repo.Repo)
 
-	filename := suite.repo.Repo.Path() + "hooks/post-rewrite"
-	scriptCall := suite.repo.Repo.Path() + `hooks/git-tree-post-rewrite.sh "$@"`
+	filename := suite.repo.Repo.Path() + "hooks/pre-rebase"
+	scriptCall := suite.repo.Repo.Path() + `hooks/git-tree-pre-rebase.sh "$@"`
+	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
+		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
+
+	filename = suite.repo.Repo.Path() + "hooks/post-rewrite"
+	scriptCall = suite.repo.Repo.Path() + `hooks/git-tree-post-rewrite.sh "$@"`
 	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
 		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
 
@@ -53,7 +58,10 @@ func (suite *InitTestSuite) TestInit_ModifiesGitHooks() {
 func (suite *InitTestSuite) TestInit_CopiesGitHookImplementations() {
 	Init(suite.repo.Repo)
 
-	filename := suite.repo.Repo.Path() + "hooks/git-tree-post-rewrite.sh"
+	filename := suite.repo.Repo.Path() + "hooks/git-tree-pre-rebase.sh"
+	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+
+	filename = suite.repo.Repo.Path() + "hooks/git-tree-post-rewrite.sh"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	filename = suite.repo.Repo.Path() + "hooks/git-tree-pre-commit.sh"

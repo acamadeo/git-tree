@@ -47,8 +47,13 @@ func (suite *DropTestSuite) TestDrop_GitHooksDontCallImplementation() {
 	// Perform Drop operation.
 	Drop(suite.repo.Repo)
 
-	filename := suite.repo.Repo.Path() + "hooks/post-rewrite"
-	scriptCall := suite.repo.Repo.Path() + `hooks/git-tree-post-rewrite.sh "$@"`
+	filename := suite.repo.Repo.Path() + "hooks/pre-rebase"
+	scriptCall := suite.repo.Repo.Path() + `hooks/git-tree-pre-rebase.sh "$@"`
+	assert.False(suite.T(), store.FileContainsLine(filename, scriptCall),
+		"Expected file %q to not contain line %q, but it not", filename, scriptCall)
+
+	filename = suite.repo.Repo.Path() + "hooks/post-rewrite"
+	scriptCall = suite.repo.Repo.Path() + `hooks/git-tree-post-rewrite.sh "$@"`
 	assert.False(suite.T(), store.FileContainsLine(filename, scriptCall),
 		"Expected file %q to not contain line %q, but it not", filename, scriptCall)
 

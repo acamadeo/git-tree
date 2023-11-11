@@ -34,9 +34,14 @@ func Drop(repo *git.Repository) error {
 }
 
 func uninstallGitHooks(repo *git.Repository) {
+	// `pre-rebase` hook
+	hookFile := repo.Path() + "hooks/pre-rebase"
+	hookImplFilename := repo.Path() + "hooks/git-tree-pre-rebase.sh"
+	uninstallGitHook(hookFile, hookImplFilename)
+
 	// `post-rewrite` hook
-	hookFile := repo.Path() + "hooks/post-rewrite"
-	hookImplFilename := repo.Path() + "hooks/git-tree-post-rewrite.sh"
+	hookFile = repo.Path() + "hooks/post-rewrite"
+	hookImplFilename = repo.Path() + "hooks/git-tree-post-rewrite.sh"
 	uninstallGitHook(hookFile, hookImplFilename)
 
 	// `pre-commit` hook
