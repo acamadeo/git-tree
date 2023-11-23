@@ -33,11 +33,12 @@ func validateObsoleteArgs(args []string) error {
 	command := args[1]
 
 	switch command {
-	case "amend":
-	case "rebase":
+	case "post-rewrite.amend":
+	case "post-rewrite.rebase":
 		if len(args) != 3 {
 			return fmt.Errorf("accepts 3 arg(s), received %d", len(args))
 		}
+	case "pre-rebase":
 	case "pre-commit":
 	case "post-commit":
 		if len(args) != 2 {
@@ -51,9 +52,11 @@ func runObsolete(context *Context, args []string) error {
 	command := args[1]
 
 	switch command {
-	case "amend":
+	case "pre-rebase":
+		return operations.ObsoletePreRebase(context.Repo)
+	case "post-rewrite.amend":
 		return operations.ObsoleteAmend(context.Repo, strings.Split(args[2], "\n"))
-	case "rebase":
+	case "post-rewrite.rebase":
 		return operations.ObsoleteRebase(context.Repo, strings.Split(args[2], "\n"))
 	case "pre-commit":
 		return operations.ObsoletePreCommit(context.Repo)
