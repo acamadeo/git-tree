@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,10 +10,10 @@ import (
 )
 
 var eventTypeStrings = map[models.EventType]string{
-	models.EventTypeUnknown: "event-type-unknown",
-	models.EventTypeRebase:  "event-type-rebase",
-	models.EventTypeAmend:   "event-type-amend",
-	models.EventTypeCommit:  "event-type-commit",
+	models.EventTypeUnknown: "unknown",
+	models.EventTypeRebase:  "rebase",
+	models.EventTypeAmend:   "amend",
+	models.EventTypeCommit:  "commit",
 }
 
 var hookTypeStrings = map[models.HookType]string{
@@ -24,10 +25,13 @@ var hookTypeStrings = map[models.HookType]string{
 
 // Read obsolescence map file
 func ReadObsolescenceMap(repo *git.Repository, filepath string) *models.ObsolescenceMap {
-	obsmap := models.ObsolescenceMap{}
+	contents := ReadFile(filepath)
+	if contents == "" {
+		return &models.ObsolescenceMap{}
+	}
 
-	lines := strings.Split(ReadFile(filepath), "\n")
-	for _, line := range lines {
+	obsmap := models.ObsolescenceMap{}
+	for _, line := range strings.Split(contents, "\n") {
 		// Check for the start of a new event.
 		if strings.HasPrefix(line, "event") {
 			lineParts := strings.Fields(line)
@@ -42,6 +46,7 @@ func ReadObsolescenceMap(repo *git.Repository, filepath string) *models.Obsolesc
 		lastEvent := obsmap.Events[len(obsmap.Events)-1]
 		lastEvent.Entries = append(lastEvent.Entries,
 			obsolescenceEntryFromLine(repo, line))
+		obsmap.Events[len(obsmap.Events)-1] = lastEvent
 	}
 
 	return &obsmap
@@ -89,20 +94,39 @@ func WriteObsolescenceMap(obsmap *models.ObsolescenceMap, filepath string) {
 	OverwriteFile(filepath, obsolescenceMapString(obsmap))
 }
 
-// Append entries to obsolescence map file under the last ObsolescenceEvent.
-//
-// TODO: Consider whether if it would be better to append an entire Event at
-// once.
-func AppendEntriesToLastObsolescenceEvent(repo *git.Repository, filepath string, entries ...models.ObsolescenceEntry) {
-	obsmap := &models.ObsolescenceMap{}
+func LastObsolescenceEventType(repo *git.Repository, filepath string) models.EventType {
+	obsmap := ReadObsolescenceMap(repo, filepath)
+	return obsmap.Events[len(obsmap.Events)-1].EventType
+}
 
-	if FileExists(filepath) {
-		obsmap = ReadObsolescenceMap(repo, filepath)
+func SetLastObsolescenceEventType(repo *git.Repository, filepath string, eventType models.EventType) {
+	obsmap := ReadObsolescenceMap(repo, filepath)
+	obsmap.Events[len(obsmap.Events)-1].EventType = eventType
+	WriteObsolescenceMap(obsmap, filepath)
+}
+
+func AppendObsolescenceEvent(repo *git.Repository, filepath string, eventType models.EventType) {
+	obsmap := ReadObsolescenceMap(repo, filepath)
+
+	obsmap.Events = append(obsmap.Events, models.ObsolescenceEvent{
+		EventType: eventType,
+	})
+	WriteObsolescenceMap(obsmap, filepath)
+}
+
+// Append entries to obsolescence map file under the last ObsolescenceEvent.
+func AppendEntriesToLastObsolescenceEvent(repo *git.Repository, filepath string, entries ...models.ObsolescenceEntry) error {
+	obsmap := ReadObsolescenceMap(repo, filepath)
+	if len(obsmap.Events) < 1 {
+		return errors.New("cannot append entry to obsolete map without events")
 	}
 
 	lastEvent := obsmap.Events[len(obsmap.Events)-1]
 	lastEvent.Entries = append(lastEvent.Entries, entries...)
+	obsmap.Events[len(obsmap.Events)-1] = lastEvent
+
 	WriteObsolescenceMap(obsmap, filepath)
+	return nil
 }
 
 func obsolescenceMapString(obsmap *models.ObsolescenceMap) string {

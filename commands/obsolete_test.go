@@ -29,6 +29,18 @@ func (suite *ObsoleteTestSuite) TearDownTest() {
 	suite.repo.Free()
 }
 
+func (suite *ObsoleteTestSuite) TestObsolete_PreRebase_ValidArgs() {
+	suite.repo.BranchWithCommit("treecko")
+
+	cmd := NewObsoleteCommand()
+	cmd.SetArgs([]string{"obsolete", "pre-rebase"})
+	gotError := cmd.Execute()
+
+	var wantError error = nil
+	assert.Equal(suite.T(), gotError, wantError,
+		"Command got error %v, but want error %v", gotError, wantError)
+}
+
 func (suite *ObsoleteTestSuite) TestObsolete_PreCommit_ValidArgs() {
 	suite.repo.BranchWithCommit("treecko")
 
@@ -44,7 +56,13 @@ func (suite *ObsoleteTestSuite) TestObsolete_PreCommit_ValidArgs() {
 func (suite *ObsoleteTestSuite) TestObsolete_PostCommit_ValidArgs() {
 	suite.repo.BranchWithCommit("treecko")
 
+	// Post-commit command is always preceded by pre-commit command. This sets
+	// up some required metadata (e.g. adding an event to the obsmap).
 	cmd := NewObsoleteCommand()
+	cmd.SetArgs([]string{"obsolete", "pre-commit"})
+	cmd.Execute()
+
+	cmd = NewObsoleteCommand()
 	cmd.SetArgs([]string{"obsolete", "post-commit"})
 	gotError := cmd.Execute()
 
