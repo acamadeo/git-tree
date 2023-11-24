@@ -27,7 +27,7 @@ func ObsoleteAmend(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}
-	return writeToObsoleteMap(repo, lines, models.PostRewriteAmend)
+	return appendEntriesToObsoleteMap(repo, lines, models.PostRewriteAmend)
 }
 
 // -------------------------------------------------------------------------- \
@@ -38,7 +38,7 @@ func ObsoleteRebase(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}
-	return writeToObsoleteMap(repo, lines, models.PostRewriteRebase)
+	return appendEntriesToObsoleteMap(repo, lines, models.PostRewriteRebase)
 }
 
 // -------------------------------------------------------------------------- \
@@ -76,14 +76,14 @@ func ObsoletePostCommit(repo *git.Repository) error {
 	}
 
 	// Mark the commit at HEAD as obsoleting its parent.
-	entry := models.ObsolescenceMapEntry{
+	entry := models.ObsolescenceEntry{
 		Commit:    headCommit.Parent(0),
 		Obsoleter: headCommit,
 		HookType:  models.PostCommit,
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendToObsolescenceMap(repo, obsmapFile, entry)
+	store.AppendEntriesToLastObsolescenceEvent(repo, obsmapFile, entry)
 	return nil
 }
 
@@ -103,8 +103,8 @@ func validateObsoleteLines(repo *git.Repository, lines []string) error {
 	return nil
 }
 
-func writeToObsoleteMap(repo *git.Repository, lines []string, hookType models.HookType) error {
-	obsmapEntries := []models.ObsolescenceMapEntry{}
+func appendEntriesToObsoleteMap(repo *git.Repository, lines []string, hookType models.HookType) error {
+	obsmapEntries := []models.ObsolescenceEntry{}
 
 	for _, line := range lines {
 		lineParts := strings.Fields(line)
@@ -117,7 +117,7 @@ func writeToObsoleteMap(repo *git.Repository, lines []string, hookType models.Ho
 		obsoleterOid, _ := git.NewOid(newHash)
 		obsoleter, _ := repo.LookupCommit(obsoleterOid)
 
-		obsmapEntries = append(obsmapEntries, models.ObsolescenceMapEntry{
+		obsmapEntries = append(obsmapEntries, models.ObsolescenceEntry{
 			Commit:    commit,
 			Obsoleter: obsoleter,
 			HookType:  hookType,
@@ -125,6 +125,6 @@ func writeToObsoleteMap(repo *git.Repository, lines []string, hookType models.Ho
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendToObsolescenceMap(repo, obsmapFile, obsmapEntries...)
+	store.AppendEntriesToLastObsolescenceEvent(repo, obsmapFile, obsmapEntries...)
 	return nil
 }
