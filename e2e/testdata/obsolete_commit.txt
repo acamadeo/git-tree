@@ -1,0 +1,41 @@
+# Obsolete map should be updated properly after commit
+# ====================================================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# TODO: Remove this extra commit after fixing nil-dereference in ObsoletePreCommit.
+# This happens if you commit on top of the first commit in the repo.
+exec write_file mudkip.txt mudkip
+exec git add .
+exec git commit -m 'Add mudkip.txt' --date $GIT_COMMITTER_DATE
+
+# Initialize git-tree
+exec git-tree init
+
+
+# --- TEST ---
+
+# Add a commit to the commit graph. This should invoke `git-tree obsolete`.
+exec write_file treecko.txt treecko
+exec git add .
+exec git commit -m 'Add treecko.txt' --date $GIT_COMMITTER_DATE
+
+exec compare .git/tree/obsmap .git/tree/golden-obsmap
+
+-- .git/tree/golden-obsmap --
+action commit
+10715bdc863e1f9d442f75676d1c8a7a5bd3d7b9 db17ec88937e3ba233e5790d7877e0e00a2018f9 post-commit

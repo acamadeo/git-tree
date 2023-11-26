@@ -24,6 +24,11 @@ func OverwriteFile(filename string, contents string) {
 		os.Remove(filename)
 	}
 
+	// Pad the contents with a final newline.
+	if !strings.HasSuffix(contents, "\n") {
+		contents = contents + "\n"
+	}
+
 	newFile, _ := os.Create(filename)
 	newFile.WriteString(contents)
 	newFile.Chmod(mode)
@@ -31,9 +36,11 @@ func OverwriteFile(filename string, contents string) {
 }
 
 // Return contents of a file as a string.
+//
+// Removes any trailing newline from the file.
 func ReadFile(filename string) string {
 	bytes, _ := os.ReadFile(filename)
-	return string(bytes)
+	return strings.TrimSuffix(string(bytes), "\n")
 }
 
 // Add a newline and append `contents` to the file.

@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// TODO: Add more end-to-end tests, where we perform the native git CLI commands
-// to trigger these obsolete commands.
-
 type ObsoleteTestSuite struct {
 	suite.Suite
 	repo testutil.TestRepository
@@ -45,7 +42,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddActionAndEntryTo
 	// Simulate user amending a commit, which fires the `pre-commit` and
 	// `post-rewrite.amend` hooks.
 	ObsoletePreCommit(suite.repo.Repo)
-	ObsoletePostRewriteAmend(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
+	ObsoletePostRewriteAmend(suite.repo.Repo, []string{"cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
@@ -54,7 +51,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddActionAndEntryTo
 	//   `action amend` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-rewrite.rebase`
 	wantString := `action amend
-1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6 post-rewrite.amend`
+cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7 post-rewrite.amend`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }
@@ -65,7 +62,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddActionAndEntryT
 	// Simulate user performing a rebase, which fires the `pre-rebase` and
 	// `post-rewrite.rebase` hooks.
 	ObsoletePreRebase(suite.repo.Repo)
-	ObsoletePostRewriteRebase(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
+	ObsoletePostRewriteRebase(suite.repo.Repo, []string{"cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
@@ -74,7 +71,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddActionAndEntryT
 	//   `action rebase` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-rewrite.rebase`
 	wantString := `action rebase
-1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6 post-rewrite.rebase`
+cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7 post-rewrite.rebase`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }
@@ -88,7 +85,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreCommit_CreatesPreCommitParentFile
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Hash of HEAD commit's parent.
-	wantString := "1bcfb74c7735e96dd69e1369d80d029b4aacbce8"
+	wantString := "cf59c4bf9d3036b68242d6e9db30c0d7654326b6"
 	gotString := suite.repo.ReadFile(".git/tree/pre-commit-parent")
 	assert.Equal(suite.T(), wantString, gotString)
 }
@@ -123,7 +120,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostCommit_AddEntryToObsmap() {
 	//   `action commit` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-commit`
 	wantString := `action commit
-5b8b675e1a0f883a7f9a608460a1f8097741e7a6 82f6f8dbc22cc410119c7a600015b8396ef12064 post-commit`
+3316a58b9dd84c7b1864a3eb4d398ca643ac23c7 d916506e4a229b277e6658504ec0321dabe9d797 post-commit`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }

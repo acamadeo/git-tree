@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/acamadeo/git-tree/common"
 	gitutil "github.com/acamadeo/git-tree/git"
@@ -97,10 +98,22 @@ func installGitHook(hookFile string, sourceFilename string, destFilename string)
 	store.OverwriteFile(destFilename, string(sourceFile))
 
 	// Call `git-tree-post-{}.sh` in the `post-{}` hook.
-	contents := fmt.Sprintf(`%s "$@"`, destFilename)
-	store.AppendToFile(hookFile, contents)
+	contents := store.ReadFile(hookFile)
+	contents = addPrefixIfNoPattern(contents, `^#!.*`, "#!/bin/bash\n")
+	contents += fmt.Sprintf(`%s "$@"`, destFilename)
+	store.OverwriteFile(hookFile, contents)
 
 	// Mark `git-tree-post-{}.sh` and `.git/hooks/post-{}` as executable.
 	os.Chmod(destFilename, 0755)
 	os.Chmod(hookFile, 0755)
+}
+
+// Prepend `contents` with `prefix` if `contents` does not contain the regex
+// `pattern`.
+func addPrefixIfNoPattern(contents string, pattern string, prefix string) string {
+	matched, _ := regexp.MatchString(pattern, contents)
+	if !matched {
+		return prefix + contents
+	}
+	return contents
 }
