@@ -32,10 +32,10 @@ func ObsoletePreRebase(repo *git.Repository) error {
 }
 
 // -------------------------------------------------------------------------- \
-// ObsoleteAmend                                                              |
+// ObsoletePostRewriteAmend                                                   |
 // -------------------------------------------------------------------------- /
 
-func ObsoleteAmend(repo *git.Repository, lines []string) error {
+func ObsoletePostRewriteAmend(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}
@@ -52,10 +52,10 @@ func ObsoleteAmend(repo *git.Repository, lines []string) error {
 }
 
 // -------------------------------------------------------------------------- \
-// ObsoleteRebase                                                             |
+// ObsoletePostRewriteRebase                                                  |
 // -------------------------------------------------------------------------- /
 
-func ObsoleteRebase(repo *git.Repository, lines []string) error {
+func ObsoletePostRewriteRebase(repo *git.Repository, lines []string) error {
 	if err := validateObsoleteLines(repo, lines); err != nil {
 		return err
 	}

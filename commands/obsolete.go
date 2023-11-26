@@ -55,9 +55,9 @@ func runObsolete(context *Context, args []string) error {
 	case "pre-rebase":
 		return operations.ObsoletePreRebase(context.Repo)
 	case "post-rewrite.amend":
-		return operations.ObsoleteAmend(context.Repo, strings.Split(args[2], "\n"))
+		return operations.ObsoletePostRewriteAmend(context.Repo, strings.Split(args[2], "\n"))
 	case "post-rewrite.rebase":
-		return operations.ObsoleteRebase(context.Repo, strings.Split(args[2], "\n"))
+		return operations.ObsoletePostRewriteRebase(context.Repo, strings.Split(args[2], "\n"))
 	case "pre-commit":
 		return operations.ObsoletePreCommit(context.Repo)
 	case "post-commit":

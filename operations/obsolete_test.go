@@ -39,13 +39,13 @@ func (suite *ObsoleteTestSuite) TestObsoletePreRebase_AddEventToObsmap() {
 	assert.Equal(suite.T(), wantString, gotString)
 }
 
-func (suite *ObsoleteTestSuite) TestObsoleteAmend_AddEventAndEntryToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddEventAndEntryToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate user amending a commit, which fires the `pre-commit` and
 	// `post-rewrite.amend` hooks.
 	ObsoletePreCommit(suite.repo.Repo)
-	ObsoleteAmend(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
+	ObsoletePostRewriteAmend(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
@@ -59,13 +59,13 @@ func (suite *ObsoleteTestSuite) TestObsoleteAmend_AddEventAndEntryToObsmap() {
 	assert.Equal(suite.T(), wantString, gotString)
 }
 
-func (suite *ObsoleteTestSuite) TestObsoleteRebase_AddEventAndEntryToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddEventAndEntryToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate user performing a rebase, which fires the `pre-rebase` and
 	// `post-rewrite.rebase` hooks.
 	ObsoletePreRebase(suite.repo.Repo)
-	ObsoleteRebase(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
+	ObsoletePostRewriteRebase(suite.repo.Repo, []string{"1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
