@@ -25,7 +25,7 @@ func (suite *ObsoleteTestSuite) TearDownTest() {
 	suite.repo.Free()
 }
 
-func (suite *ObsoleteTestSuite) TestObsoletePreRebase_AddEventToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePreRebase_AddActionToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate output from `pre-rebase` hook after user initiates a rebase.
@@ -34,12 +34,12 @@ func (suite *ObsoleteTestSuite) TestObsoletePreRebase_AddEventToObsmap() {
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
-	wantString := "event rebase"
+	wantString := "action rebase"
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }
 
-func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddEventAndEntryToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddActionAndEntryToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate user amending a commit, which fires the `pre-commit` and
@@ -51,15 +51,15 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddEventAndEntryToO
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
-	//   `event amend` (the event header)
+	//   `action amend` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-rewrite.rebase`
-	wantString := `event amend
+	wantString := `action amend
 1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6 post-rewrite.amend`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }
 
-func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddEventAndEntryToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddActionAndEntryToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate user performing a rebase, which fires the `pre-rebase` and
@@ -71,9 +71,9 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddEventAndEntryTo
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
-	//   `event rebase` (the event header)
+	//   `action rebase` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-rewrite.rebase`
-	wantString := `event rebase
+	wantString := `action rebase
 1bcfb74c7735e96dd69e1369d80d029b4aacbce8 5b8b675e1a0f883a7f9a608460a1f8097741e7a6 post-rewrite.rebase`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
@@ -93,7 +93,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreCommit_CreatesPreCommitParentFile
 	assert.Equal(suite.T(), wantString, gotString)
 }
 
-func (suite *ObsoleteTestSuite) TestObsoletePreCommit_AddEventToObsmap() {
+func (suite *ObsoleteTestSuite) TestObsoletePreCommit_AddActionToObsmap() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Simulate output from `pre-commit` hook.
@@ -102,7 +102,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreCommit_AddEventToObsmap() {
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
-	wantString := "event commit"
+	wantString := "action commit"
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }
@@ -120,9 +120,9 @@ func (suite *ObsoleteTestSuite) TestObsoletePostCommit_AddEntryToObsmap() {
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
-	//   `event commit` (the event header)
+	//   `action commit` (the action header)
 	//   `Parent of HEAD (obsoleted)` - `HEAD (obsoleter)` - `post-commit`
-	wantString := `event commit
+	wantString := `action commit
 5b8b675e1a0f883a7f9a608460a1f8097741e7a6 82f6f8dbc22cc410119c7a600015b8396ef12064 post-commit`
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
@@ -144,11 +144,11 @@ func (suite *ObsoleteTestSuite) TestObsoletePostCommit_DontAddEntryIfCommitWasAm
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
 	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
-	// No entry appears under this event.
+	// No entry appears under this action.
 	//
-	// NOTE: The event is still marked as `commit` because it gets changed in
+	// NOTE: The action is still marked as `commit` because it gets changed in
 	// the `post-rewrite.amend` hook.
-	wantString := "event commit"
+	wantString := "action commit"
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
 	assert.Equal(suite.T(), wantString, gotString)
 }

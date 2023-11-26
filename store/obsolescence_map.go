@@ -9,11 +9,11 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
-var eventTypeStrings = map[models.EventType]string{
-	models.EventTypeUnknown: "unknown",
-	models.EventTypeRebase:  "rebase",
-	models.EventTypeAmend:   "amend",
-	models.EventTypeCommit:  "commit",
+var actionTypeStrings = map[models.ActionType]string{
+	models.ActionTypeUnknown: "unknown",
+	models.ActionTypeRebase:  "rebase",
+	models.ActionTypeAmend:   "amend",
+	models.ActionTypeCommit:  "commit",
 }
 
 var hookTypeStrings = map[models.HookType]string{
@@ -32,21 +32,21 @@ func ReadObsolescenceMap(repo *git.Repository, filepath string) *models.Obsolesc
 
 	obsmap := models.ObsolescenceMap{}
 	for _, line := range strings.Split(contents, "\n") {
-		// Check for the start of a new event.
-		if strings.HasPrefix(line, "event") {
+		// Check for the start of a new action.
+		if strings.HasPrefix(line, "action") {
 			lineParts := strings.Fields(line)
-			obsmap.Events = append(obsmap.Events, models.ObsolescenceEvent{
-				EventType: eventTypeFromString(lineParts[1]),
+			obsmap.Actions = append(obsmap.Actions, models.ObsolescenceAction{
+				ActionType: actionTypeFromString(lineParts[1]),
 			})
 			continue
 		}
 
-		// Line does not indicate the start of a new event. Append an entry to
-		// the latest event.
-		lastEvent := obsmap.Events[len(obsmap.Events)-1]
-		lastEvent.Entries = append(lastEvent.Entries,
+		// Line does not indicate the start of a new action. Append an entry to
+		// the latest action.
+		lastAction := obsmap.Actions[len(obsmap.Actions)-1]
+		lastAction.Entries = append(lastAction.Entries,
 			obsolescenceEntryFromLine(repo, line))
-		obsmap.Events[len(obsmap.Events)-1] = lastEvent
+		obsmap.Actions[len(obsmap.Actions)-1] = lastAction
 	}
 
 	return &obsmap
@@ -71,13 +71,13 @@ func obsolescenceEntryFromLine(repo *git.Repository, line string) models.Obsoles
 	}
 }
 
-func eventTypeFromString(value string) models.EventType {
-	for eventType, str := range eventTypeStrings {
+func actionTypeFromString(value string) models.ActionType {
+	for actionType, str := range actionTypeStrings {
 		if str == value {
-			return eventType
+			return actionType
 		}
 	}
-	return models.EventTypeUnknown
+	return models.ActionTypeUnknown
 }
 
 func hookTypeFromString(value string) models.HookType {
@@ -94,36 +94,36 @@ func WriteObsolescenceMap(obsmap *models.ObsolescenceMap, filepath string) {
 	OverwriteFile(filepath, obsolescenceMapString(obsmap))
 }
 
-func LastObsolescenceEventType(repo *git.Repository, filepath string) models.EventType {
+func LastObsolescenceActionType(repo *git.Repository, filepath string) models.ActionType {
 	obsmap := ReadObsolescenceMap(repo, filepath)
-	return obsmap.Events[len(obsmap.Events)-1].EventType
+	return obsmap.Actions[len(obsmap.Actions)-1].ActionType
 }
 
-func SetLastObsolescenceEventType(repo *git.Repository, filepath string, eventType models.EventType) {
+func SetLastObsolescenceActionType(repo *git.Repository, filepath string, actionType models.ActionType) {
 	obsmap := ReadObsolescenceMap(repo, filepath)
-	obsmap.Events[len(obsmap.Events)-1].EventType = eventType
+	obsmap.Actions[len(obsmap.Actions)-1].ActionType = actionType
 	WriteObsolescenceMap(obsmap, filepath)
 }
 
-func AppendObsolescenceEvent(repo *git.Repository, filepath string, eventType models.EventType) {
+func AppendObsolescenceAction(repo *git.Repository, filepath string, ActionType models.ActionType) {
 	obsmap := ReadObsolescenceMap(repo, filepath)
 
-	obsmap.Events = append(obsmap.Events, models.ObsolescenceEvent{
-		EventType: eventType,
+	obsmap.Actions = append(obsmap.Actions, models.ObsolescenceAction{
+		ActionType: ActionType,
 	})
 	WriteObsolescenceMap(obsmap, filepath)
 }
 
-// Append entries to obsolescence map file under the last ObsolescenceEvent.
-func AppendEntriesToLastObsolescenceEvent(repo *git.Repository, filepath string, entries ...models.ObsolescenceEntry) error {
+// Append entries to obsolescence map file under the last ObsolescenceAction.
+func AppendEntriesToLastObsolescenceAction(repo *git.Repository, filepath string, entries ...models.ObsolescenceEntry) error {
 	obsmap := ReadObsolescenceMap(repo, filepath)
-	if len(obsmap.Events) < 1 {
-		return errors.New("cannot append entry to obsolete map without events")
+	if len(obsmap.Actions) < 1 {
+		return errors.New("cannot append entry to obsolete map without actions")
 	}
 
-	lastEvent := obsmap.Events[len(obsmap.Events)-1]
-	lastEvent.Entries = append(lastEvent.Entries, entries...)
-	obsmap.Events[len(obsmap.Events)-1] = lastEvent
+	lastAction := obsmap.Actions[len(obsmap.Actions)-1]
+	lastAction.Entries = append(lastAction.Entries, entries...)
+	obsmap.Actions[len(obsmap.Actions)-1] = lastAction
 
 	WriteObsolescenceMap(obsmap, filepath)
 	return nil
@@ -132,12 +132,12 @@ func AppendEntriesToLastObsolescenceEvent(repo *git.Repository, filepath string,
 func obsolescenceMapString(obsmap *models.ObsolescenceMap) string {
 	output := []string{}
 
-	for _, event := range obsmap.Events {
-		eventHeader := fmt.Sprintf("event %s",
-			eventTypeStrings[event.EventType])
-		output = append(output, eventHeader)
+	for _, action := range obsmap.Actions {
+		actionHeader := fmt.Sprintf("action %s",
+			actionTypeStrings[action.ActionType])
+		output = append(output, actionHeader)
 
-		for _, entry := range event.Entries {
+		for _, entry := range action.Entries {
 			entryString := fmt.Sprintf("%s %s %s",
 				entry.Commit.Id().String(),
 				entry.Obsoleter.Id().String(),

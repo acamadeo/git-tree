@@ -57,7 +57,7 @@ func (suite *ObsoleteTestSuite) TestObsolete_PostCommit_ValidArgs() {
 	suite.repo.BranchWithCommit("treecko")
 
 	// Post-commit command is always preceded by pre-commit command. This sets
-	// up some required metadata (e.g. adding an event to the obsmap).
+	// up some required metadata (e.g. adding an action to the obsmap).
 	cmd := NewObsoleteCommand()
 	cmd.SetArgs([]string{"obsolete", "pre-commit"})
 	cmd.Execute()

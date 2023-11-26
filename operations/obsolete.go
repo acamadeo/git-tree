@@ -12,22 +12,22 @@ import (
 
 // KNOWN ISSUE:
 //   When you amend a commit during a split rebase (via `edit`), the rebase
-//   entries appears under `event amend` instead of `event rebase`.
+//   entries appears under `action amend` instead of `action rebase`.
 //
 //   Perhaps we should check whether there is a rebase in progress before
-//   creating a new event in the `pre-commit` hook?
+//   creating a new action in the `pre-commit` hook?
 
-// NOTE TO SELF: If there's extraneous entries under certain events (e.g.
-// post-commit entries in rebase event), don't include them.
+// NOTE TO SELF: If there's extraneous entries under certain actions (e.g.
+// post-commit entries in rebase action), don't include them.
 
 // -------------------------------------------------------------------------- \
 // ObsoletePreRebase                                                          |
 // -------------------------------------------------------------------------- /
 
 func ObsoletePreRebase(repo *git.Repository) error {
-	// Add a new Obsolescence Event with the Rebase EventType.
+	// Add a new Obsolescence Action with the Rebase ActionType.
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendObsolescenceEvent(repo, obsmapFile, models.EventTypeRebase)
+	store.AppendObsolescenceAction(repo, obsmapFile, models.ActionTypeRebase)
 	return nil
 }
 
@@ -40,12 +40,12 @@ func ObsoletePostRewriteAmend(repo *git.Repository, lines []string) error {
 		return err
 	}
 
-	// Commit events and Amend events both start with a `pre-commit` hook. If we
+	// Commit actions and Amend actions both start with a `pre-commit` hook. If we
 	// receive `post-rewrite.amend` after `pre-commit`, we know this is an Amend
-	// event, not a Commit event.
+	// action, not a Commit action.
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	if store.LastObsolescenceEventType(repo, obsmapFile) == models.EventTypeCommit {
-		store.SetLastObsolescenceEventType(repo, obsmapFile, models.EventTypeAmend)
+	if store.LastObsolescenceActionType(repo, obsmapFile) == models.ActionTypeCommit {
+		store.SetLastObsolescenceActionType(repo, obsmapFile, models.ActionTypeAmend)
 	}
 
 	return appendEntriesToObsoleteMap(repo, lines, models.PostRewriteAmend)
@@ -74,11 +74,11 @@ func ObsoletePreCommit(repo *git.Repository) error {
 	contents := headCommit.ParentId(0).String()
 	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), contents)
 
-	// Add a new Obsolescence Event. We assume it's a Commit event by default.
-	// If it was an Amend event, we'll modify the type of this event when the
+	// Add a new Obsolescence Action. We assume it's a Commit action by default.
+	// If it was an Amend action, we'll modify the type of this action when the
 	// `post-rewrite.amend` hook fires.
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	store.AppendObsolescenceEvent(repo, obsmapFile, models.EventTypeCommit)
+	store.AppendObsolescenceAction(repo, obsmapFile, models.ActionTypeCommit)
 	return nil
 }
 
@@ -110,7 +110,7 @@ func ObsoletePostCommit(repo *git.Repository) error {
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	return store.AppendEntriesToLastObsolescenceEvent(repo, obsmapFile, entry)
+	return store.AppendEntriesToLastObsolescenceAction(repo, obsmapFile, entry)
 }
 
 func validateObsoleteLines(repo *git.Repository, lines []string) error {
@@ -151,5 +151,5 @@ func appendEntriesToObsoleteMap(repo *git.Repository, lines []string, hookType m
 	}
 
 	obsmapFile := common.ObsoleteMapPath(repo.Path())
-	return store.AppendEntriesToLastObsolescenceEvent(repo, obsmapFile, obsmapEntries...)
+	return store.AppendEntriesToLastObsolescenceAction(repo, obsmapFile, obsmapEntries...)
 }

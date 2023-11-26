@@ -70,8 +70,8 @@ func anyObsoleteCommits(obsmap *models.ObsolescenceMap, localCommits []*git.Comm
 		localCommitOids[*commit.Id()] = true
 	}
 
-	for _, event := range obsmap.Events {
-		for _, entry := range event.Entries {
+	for _, action := range obsmap.Actions {
+		for _, entry := range action.Entries {
 			if _, ok := localCommitOids[*entry.Commit.Id()]; ok {
 				return true
 			}

@@ -2,21 +2,13 @@ package models
 
 import git "github.com/libgit2/git2go/v34"
 
-// Contains a map of the each obsolete commit and the commit that obsoleted it.
-//
-// This map is broken down into ObsolescenceEvents, which are all the obsolescences
-// that occurred from running a git command.
-type ObsolescenceMap struct {
-	Events []ObsolescenceEvent
-}
-
-type EventType int
+type ActionType int
 
 const (
-	EventTypeUnknown EventType = iota
-	EventTypeRebase
-	EventTypeAmend
-	EventTypeCommit
+	ActionTypeUnknown ActionType = iota
+	ActionTypeRebase
+	ActionTypeAmend
+	ActionTypeCommit
 )
 
 // TODO: Delete this if it is not necessary!
@@ -29,9 +21,17 @@ const (
 	PostCommit
 )
 
-type ObsolescenceEvent struct {
-	EventType EventType
-	// All the obsolescences that occurred in this event.
+// Contains a map of the each obsolete commit and the commit that obsoleted it.
+//
+// This map is broken down into ObsolescenceActions, which are all the obsolescences
+// that occurred from running a git command.
+type ObsolescenceMap struct {
+	Actions []ObsolescenceAction
+}
+
+type ObsolescenceAction struct {
+	ActionType ActionType
+	// All the obsolescences that occurred in this action.
 	Entries []ObsolescenceEntry
 }
 
