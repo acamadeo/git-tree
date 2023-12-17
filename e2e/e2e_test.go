@@ -13,6 +13,14 @@ import (
 
 var reCarriageReturn = regexp.MustCompile(`\r`)
 
+// Paste the contents in file `$INSTRUCT_FILE` into Git's sequence editor file.
+func runEditor() int {
+	gitInstructionFile := os.Args[1]
+	instructions := store.ReadFile(os.Getenv("INSTRUCT_FILE"))
+	store.OverwriteFile(gitInstructionFile, instructions)
+	return 0
+}
+
 func runWriteFile() int {
 	filename, contents := os.Args[1], os.Args[2]
 	store.OverwriteFile(filename, contents)
@@ -42,6 +50,7 @@ func runCompare() int {
 func TestMain(m *testing.M) {
 	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"git-tree":   commands.Main,
+		"editor":     runEditor,
 		"write_file": runWriteFile,
 		"compare":    runCompare,
 	}))
