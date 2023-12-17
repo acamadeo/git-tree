@@ -1,0 +1,33 @@
+# Obsolete map should be updated properly after amending a commit
+# ===============================================================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# Initialize git-tree
+exec git-tree init
+
+
+# --- TEST ---
+
+# Amend the last commit. This should invoke `git-tree obsolete`.
+exec git commit --amend -m 'first commit' --date $GIT_COMMITTER_DATE
+
+exec compare .git/tree/obsmap .git/tree/golden-obsmap
+
+-- .git/tree/golden-obsmap --
+action amend
+cbfe4ef696ed3aa26c590a18febce2f84de40450 4c0b1b37412a7d521838bfe323585f5142badbbf post-rewrite.amend
