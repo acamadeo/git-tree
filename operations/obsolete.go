@@ -67,12 +67,16 @@ func ObsoletePostRewriteRebase(repo *git.Repository, lines []string) error {
 // -------------------------------------------------------------------------- /
 
 func ObsoletePreCommit(repo *git.Repository) error {
-	// Store the parent of the commit at HEAD.
+	// Store the parent of the commit at HEAD, or "null" if HEAD is at the
+	// initial commit.
 	headRef, _ := repo.Head()
 	headCommit, _ := repo.LookupCommit(headRef.Target())
 
-	contents := headCommit.ParentId(0).String()
-	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), contents)
+	headParent := "null"
+	if headCommit.ParentCount() > 0 {
+		headParent = headCommit.ParentId(0).String()
+	}
+	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), headParent)
 
 	// Add a new Obsolescence Action. We assume it's a Commit action by default.
 	// If it was an Amend action, we'll modify the type of this action when the
@@ -98,7 +102,11 @@ func ObsoletePostCommit(repo *git.Repository) error {
 
 	// If the parent of HEAD are the same pre- and post-commit, this was
 	// `git commit --amend`. Ignore.
-	if headCommit.ParentId(0).String() == preCommitParent {
+	headParent := "null"
+	if headCommit.ParentCount() > 0 {
+		headParent = headCommit.ParentId(0).String()
+	}
+	if headParent == preCommitParent {
 		return nil
 	}
 
