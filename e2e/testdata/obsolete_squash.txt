@@ -1,0 +1,92 @@
+# Obsolete map should be updated properly after squashing commits with rebase
+# ============================================================================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Specify the test interactive sequence editor program (used in `git rebase -i`).
+env GIT_SEQUENCE_EDITOR='seq_editor'
+
+# Specify the test interactive editor program.
+env GIT_EDITOR='editor'
+
+# The test interactive editor should paste the instructions in `SEQ_EDITOR_INPUT`
+# into Git's instruction sheet.
+env SEQ_EDITOR_INPUT='.git/tree/rebase-instructs'
+
+# The test interactive editor should use the contents in `EDITOR_INPUT`.
+env EDITOR_INPUT='.git/tree/squashed-commit-name'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# Add commits to the commit graph.
+exec write_file treecko.txt treecko
+exec git add .
+exec git commit -m 'Add treecko.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file grovyle.txt grovyle
+exec git add .
+exec git commit -m 'Add grovyle.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file sceptile.txt sceptile
+exec git add .
+exec git commit -m 'Add sceptile.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file turtwig.txt turtwig
+exec git add .
+exec git commit -m 'Add turtwig.txt' --date $GIT_COMMITTER_DATE
+
+# Initialize git-tree
+exec git-tree init
+
+
+# --- TEST ---
+
+# Squash the commits in the graph.
+#
+# Initial:
+#
+#   initial ─── treecko ─── grovyle ─── sceptile ─── turtwig
+#
+# Result:
+#
+#   initial ─── treecko ─── turtwig
+#
+exec git rebase -i HEAD~4
+
+# When you squash commits via rebase, it invokes:
+#   1. pre-rebase
+#   2. {post-commit, post-rewrite.amend} as it performs each squash
+#   3. {post-commit} for each commit after the squashed commits
+#   4. post-rewrite.rebase
+exec compare .git/tree/obsmap .git/tree/golden-obsmap
+
+-- .git/tree/rebase-instructs --
+pick dc7bfab Add treecko.txt
+squash 578c87e Add grovyle.txt
+squash d932808 Add sceptile.txt
+pick 6f8a3bf Add turtwig.txt
+-- .git/tree/squashed-commit-name --
+Add treecko.txt
+-- .git/tree/golden-obsmap --
+action rebase
+cbfe4ef696ed3aa26c590a18febce2f84de40450 7422d54ee153264411e39fd404446eb61d1a1de2 post-commit
+dc7bfabc1453c58fcffd3713489d405eb62989c5 7422d54ee153264411e39fd404446eb61d1a1de2 post-rewrite.amend
+cbfe4ef696ed3aa26c590a18febce2f84de40450 37f8a7bb9615a80600b999e7d3c3dba487a5c11a post-commit
+7422d54ee153264411e39fd404446eb61d1a1de2 37f8a7bb9615a80600b999e7d3c3dba487a5c11a post-rewrite.amend
+37f8a7bb9615a80600b999e7d3c3dba487a5c11a 07612ead98b3c576980e77121418c3033afcb5b1 post-commit
+dc7bfabc1453c58fcffd3713489d405eb62989c5 37f8a7bb9615a80600b999e7d3c3dba487a5c11a post-rewrite.rebase
+578c87e90abf2a4e32406769c34d635606640bc8 37f8a7bb9615a80600b999e7d3c3dba487a5c11a post-rewrite.rebase
+d93280888c9a05323ba67380c5389ac3bb1bae88 37f8a7bb9615a80600b999e7d3c3dba487a5c11a post-rewrite.rebase
+6f8a3bf93975256a4c213b434a70fdf78710c040 07612ead98b3c576980e77121418c3033afcb5b1 post-rewrite.rebase

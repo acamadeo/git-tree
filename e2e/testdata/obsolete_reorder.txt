@@ -9,12 +9,12 @@ env PATH=$PATH${:}/usr/bin/
 # Specify commit timestamp so commit hashes are fixed.
 env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
 
-# Specify the test interactive editor program (stubbed out for `git rebase -i`).
-env GIT_SEQUENCE_EDITOR='editor'
+# Specify the test interactive sequence editor program (used in `git rebase -i`).
+env GIT_SEQUENCE_EDITOR='seq_editor'
 
-# The test interactive editor should paste the instructions in `INSTRUCT_FILE`
+# The test interactive editor should paste the instructions in `SEQ_EDITOR_INPUT`
 # into Git's instruction sheet.
-env INSTRUCT_FILE='.git/tree/rebase-instructs'
+env SEQ_EDITOR_INPUT='.git/tree/rebase-instructs'
 
 # Setup the Git repository
 exec git init
