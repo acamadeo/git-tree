@@ -5,17 +5,11 @@ import (
 	"strings"
 
 	"github.com/acamadeo/git-tree/common"
+	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
-
-// KNOWN ISSUE:
-//   When you amend a commit during a split rebase (via `edit`), the rebase
-//   entries appears under `action amend` instead of `action rebase`.
-//
-//   Perhaps we should check whether there is a rebase in progress before
-//   creating a new action in the `pre-commit` hook?
 
 // NOTE TO SELF: If there's extraneous entries under certain actions (e.g.
 // post-commit entries in rebase action), don't include them.
@@ -77,6 +71,12 @@ func ObsoletePreCommit(repo *git.Repository) error {
 		headParent = headCommit.ParentId(0).String()
 	}
 	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), headParent)
+
+	// If an interactive rebase is in-progress, `pre-commit` was triggered
+	// within the rebase. Don't add a new action.
+	if gitutil.InteractiveRebaseInProgress(repo) {
+		return nil
+	}
 
 	// Add a new Obsolescence Action. We assume it's a Commit action by default.
 	// If it was an Amend action, we'll modify the type of this action when the

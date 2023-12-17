@@ -2,6 +2,8 @@ package gitutil
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	git "github.com/libgit2/git2go/v34"
 )
@@ -25,6 +27,13 @@ type RebaseResult struct {
 
 const successfulRebaseError = "IterOver"
 const unstagedChangesError = "unstaged changes exist in workdir"
+
+func InteractiveRebaseInProgress(repo *git.Repository) bool {
+	filename := filepath.Join(repo.Path(), "rebase-merge", "interactive")
+	// TODO: Factor file utils into `common/` and use `FileExists()`.
+	_, err := os.Stat(filename)
+	return err == nil
+}
 
 func InitRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) (*git.Rebase, error) {
 	toMoveAC := annotatedCommit(repo, *toMove)
