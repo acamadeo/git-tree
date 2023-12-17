@@ -3,8 +3,8 @@ package operations
 import (
 	"testing"
 
-	"github.com/acamadeo/git-tree/store"
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/acamadeo/git-tree/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -28,7 +28,7 @@ func (suite *InitTestSuite) TestInit_CreatesBranchMapFile() {
 	Init(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/branches"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 }
 
 func (suite *InitTestSuite) TestInit_ModifiesGitHooks() {
@@ -36,22 +36,22 @@ func (suite *InitTestSuite) TestInit_ModifiesGitHooks() {
 
 	filename := suite.repo.Repo.Path() + "hooks/pre-rebase"
 	scriptCall := suite.repo.Repo.Path() + `hooks/git-tree-pre-rebase.sh "$@"`
-	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
+	assert.True(suite.T(), utils.FileContainsLine(filename, scriptCall),
 		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
 
 	filename = suite.repo.Repo.Path() + "hooks/post-rewrite"
 	scriptCall = suite.repo.Repo.Path() + `hooks/git-tree-post-rewrite.sh "$@"`
-	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
+	assert.True(suite.T(), utils.FileContainsLine(filename, scriptCall),
 		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
 
 	filename = suite.repo.Repo.Path() + "hooks/pre-commit"
 	scriptCall = suite.repo.Repo.Path() + `hooks/git-tree-pre-commit.sh "$@"`
-	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
+	assert.True(suite.T(), utils.FileContainsLine(filename, scriptCall),
 		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
 
 	filename = suite.repo.Repo.Path() + "hooks/post-commit"
 	scriptCall = suite.repo.Repo.Path() + `hooks/git-tree-post-commit.sh "$@"`
-	assert.True(suite.T(), store.FileContainsLine(filename, scriptCall),
+	assert.True(suite.T(), utils.FileContainsLine(filename, scriptCall),
 		"Expected file %q to contain line %q, but it does not", filename, scriptCall)
 }
 
@@ -59,16 +59,16 @@ func (suite *InitTestSuite) TestInit_CopiesGitHookImplementations() {
 	Init(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "hooks/git-tree-pre-rebase.sh"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	filename = suite.repo.Repo.Path() + "hooks/git-tree-post-rewrite.sh"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	filename = suite.repo.Repo.Path() + "hooks/git-tree-pre-commit.sh"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	filename = suite.repo.Repo.Path() + "hooks/git-tree-post-commit.sh"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 }
 
 // Branches:

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	gitutil "github.com/acamadeo/git-tree/git"
-	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -70,17 +70,17 @@ func (t *TestRepository) IsBranchAncestor(a string, b string) bool {
 //
 // This overwrites the contents of the file if the file already exists.
 func (t *TestRepository) WriteFile(filename string, contents string) {
-	store.OverwriteFile(t.Repo.Workdir()+filename, contents)
+	utils.OverwriteFile(t.Repo.Workdir()+filename, contents)
 }
 
 // Return contents of a file as a string.
 func (t *TestRepository) ReadFile(filename string) string {
-	return store.ReadFile(t.Repo.Workdir() + filename)
+	return utils.ReadFile(t.Repo.Workdir() + filename)
 }
 
 // Returns whether the file exists.
 func (t *TestRepository) FileExists(filename string) bool {
-	return store.FileExists(t.Repo.Workdir() + filename)
+	return utils.FileExists(t.Repo.Workdir() + filename)
 }
 
 // Stage the the specified files. If no argument is provided, all unstaged files

@@ -7,6 +7,7 @@ import (
 
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 	"golang.org/x/exp/maps"
 )
@@ -31,7 +32,7 @@ func ReadBranchMap(repo *git.Repository, filepath string) *models.BranchMap {
 
 // Write branch map file.
 func WriteBranchMap(branchMap *models.BranchMap, filepath string) {
-	OverwriteFile(filepath, branchMap2String(branchMap))
+	utils.OverwriteFile(filepath, branchMap2String(branchMap))
 }
 
 /**

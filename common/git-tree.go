@@ -2,14 +2,14 @@ package common
 
 import (
 	"github.com/acamadeo/git-tree/models"
-	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
 // Returns true if `git-tree init` has been run.
 func GitTreeInited(gitPath string) bool {
 	// A branch map file should exist if git-tree has been initialized.
-	return store.FileExists(BranchMapPath(gitPath))
+	return utils.FileExists(BranchMapPath(gitPath))
 }
 
 // Returns true if you are on the a tip commit (i.e., a commit referenced by a

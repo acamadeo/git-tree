@@ -6,6 +6,7 @@ import (
 
 	"github.com/acamadeo/git-tree/common"
 	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -61,5 +62,5 @@ func uninstallGitHook(hookFile string, hookImplFilename string) {
 
 	// Delete call to `git-tree-post-{}.sh` in the `post-{}` hook.
 	scriptCall := fmt.Sprintf(`%s "$@"`, hookImplFilename)
-	store.DeleteLineInFile(hookFile, scriptCall)
+	utils.DeleteLineInFile(hookFile, scriptCall)
 }

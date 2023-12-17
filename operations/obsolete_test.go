@@ -3,8 +3,8 @@ package operations
 import (
 	"testing"
 
-	"github.com/acamadeo/git-tree/store"
 	"github.com/acamadeo/git-tree/testutil"
+	"github.com/acamadeo/git-tree/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -29,7 +29,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreRebase_AddActionToObsmap() {
 	ObsoletePreRebase(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	wantString := "action rebase"
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
@@ -45,7 +45,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteAmend_AddActionAndEntryTo
 	ObsoletePostRewriteAmend(suite.repo.Repo, []string{"cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
 	//   `action amend` (the action header)
@@ -65,7 +65,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostRewriteRebase_AddActionAndEntryT
 	ObsoletePostRewriteRebase(suite.repo.Repo, []string{"cf59c4bf9d3036b68242d6e9db30c0d7654326b6 3316a58b9dd84c7b1864a3eb4d398ca643ac23c7"})
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
 	//   `action rebase` (the action header)
@@ -82,7 +82,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreCommit_CreatesPreCommitParentFile
 	ObsoletePreCommit(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/pre-commit-parent"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Hash of HEAD commit's parent.
 	wantString := "cf59c4bf9d3036b68242d6e9db30c0d7654326b6"
@@ -97,7 +97,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePreCommit_AddActionToObsmap() {
 	ObsoletePreCommit(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	wantString := "action commit"
 	gotString := suite.repo.ReadFile(".git/tree/obsmap")
@@ -114,7 +114,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostCommit_AddEntryToObsmap() {
 	ObsoletePostCommit(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// Obsmap:
 	//   `action commit` (the action header)
@@ -139,7 +139,7 @@ func (suite *ObsoleteTestSuite) TestObsoletePostCommit_DontAddEntryIfCommitWasAm
 	ObsoletePostCommit(suite.repo.Repo)
 
 	filename := suite.repo.Repo.Path() + "tree/obsmap"
-	assert.True(suite.T(), store.FileExists(filename), "Expected file %q to exist, but it does not", filename)
+	assert.True(suite.T(), utils.FileExists(filename), "Expected file %q to exist, but it does not", filename)
 
 	// No entry appears under this action.
 	//

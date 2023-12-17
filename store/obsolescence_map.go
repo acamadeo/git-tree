@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -25,7 +26,7 @@ var hookTypeStrings = map[models.HookType]string{
 
 // Read obsolescence map file
 func ReadObsolescenceMap(repo *git.Repository, filepath string) *models.ObsolescenceMap {
-	contents := ReadFile(filepath)
+	contents := utils.ReadFile(filepath)
 	if contents == "" {
 		return &models.ObsolescenceMap{}
 	}
@@ -91,7 +92,7 @@ func hookTypeFromString(value string) models.HookType {
 
 // Write obsolescence map file
 func WriteObsolescenceMap(obsmap *models.ObsolescenceMap, filepath string) {
-	OverwriteFile(filepath, obsolescenceMapString(obsmap))
+	utils.OverwriteFile(filepath, obsolescenceMapString(obsmap))
 }
 
 func LastObsolescenceActionType(repo *git.Repository, filepath string) models.ActionType {

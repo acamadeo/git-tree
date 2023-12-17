@@ -2,9 +2,9 @@ package gitutil
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -30,9 +30,7 @@ const unstagedChangesError = "unstaged changes exist in workdir"
 
 func InteractiveRebaseInProgress(repo *git.Repository) bool {
 	filename := filepath.Join(repo.Path(), "rebase-merge", "interactive")
-	// TODO: Factor file utils into `common/` and use `FileExists()`.
-	_, err := os.Stat(filename)
-	return err == nil
+	return utils.FileExists(filename)
 }
 
 func InitRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) (*git.Rebase, error) {

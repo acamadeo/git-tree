@@ -9,6 +9,7 @@ import (
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -72,10 +73,10 @@ func RebaseTreeContinue(repo *git.Repository) RebaseTreeResult {
 	branchMap := store.ReadBranchMap(repo, common.BranchMapPath(repo.Path()))
 
 	// Look up source and dest branches.
-	sourceName := store.ReadFile(common.RebasingSourcePath(repo.Path()))
+	sourceName := utils.ReadFile(common.RebasingSourcePath(repo.Path()))
 	source := branchMap.FindBranch(sourceName)
 
-	destName := store.ReadFile(common.RebasingDestPath(repo.Path()))
+	destName := utils.ReadFile(common.RebasingDestPath(repo.Path()))
 	dest := branchMap.FindBranch(destName)
 
 	runner := newRebaseTreeRunner(repo, source, dest, branchMap)
@@ -144,7 +145,7 @@ func RebaseTreeAbort(repo *git.Repository) RebaseTreeResult {
 // returning an error if it is not.
 func validateRebaseTree(repo *git.Repository, source *git.Branch, dest *git.Branch, branchMap *models.BranchMap) error {
 	// Cannot run `git-tree rebase` if another rebase is in progress.
-	if store.FileExists(common.RebasingPath(repo.Path())) {
+	if utils.FileExists(common.RebasingPath(repo.Path())) {
 		return errors.New("Cannot rebase while another rebase is in progress. Abort or continue the existing rebase")
 	}
 
@@ -282,14 +283,14 @@ func (r *rebaseTreeRunner) createTempBranch(branch *git.Branch) *git.Branch {
 func (r *rebaseTreeRunner) handleMergeConflict() {
 	// Create a file indicating a rebase is in progress.
 	path := common.RebasingPath(r.repo.Path())
-	store.OverwriteFile(path, "")
+	utils.OverwriteFile(path, "")
 
 	// Store the `source` and `dest` branches.
 	path = common.RebasingSourcePath(r.repo.Path())
-	store.OverwriteFile(path, gitutil.BranchName(r.source))
+	utils.OverwriteFile(path, gitutil.BranchName(r.source))
 
 	path = common.RebasingDestPath(r.repo.Path())
-	store.OverwriteFile(path, gitutil.BranchName(r.dest))
+	utils.OverwriteFile(path, gitutil.BranchName(r.dest))
 
 	// Store the temporary branches with pointers to each one's original branch.
 	path = common.RebasingTempsPath(r.repo.Path())

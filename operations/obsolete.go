@@ -8,6 +8,7 @@ import (
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -70,7 +71,7 @@ func ObsoletePreCommit(repo *git.Repository) error {
 	if headCommit.ParentCount() > 0 {
 		headParent = headCommit.ParentId(0).String()
 	}
-	store.OverwriteFile(common.PreCommitParentPath(repo.Path()), headParent)
+	utils.OverwriteFile(common.PreCommitParentPath(repo.Path()), headParent)
 
 	// If an interactive rebase is in-progress, `pre-commit` was triggered
 	// within the rebase. Don't add a new action.
@@ -97,7 +98,7 @@ func ObsoletePostCommit(repo *git.Repository) error {
 	headCommit, _ := repo.LookupCommit(headRef.Target())
 
 	preCommitParentPath := common.PreCommitParentPath(repo.Path())
-	preCommitParent := store.ReadFile(preCommitParentPath)
+	preCommitParent := utils.ReadFile(preCommitParentPath)
 	defer os.Remove(preCommitParentPath)
 
 	// If the parent of HEAD are the same pre- and post-commit, this was

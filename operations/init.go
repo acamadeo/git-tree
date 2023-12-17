@@ -10,6 +10,7 @@ import (
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -95,13 +96,13 @@ func installGitHooks(repo *git.Repository) {
 func installGitHook(hookFile string, sourceFilename string, destFilename string) {
 	// Copy `scripts/git-tree-post-{}.sh` into `.git/hooks/`.
 	sourceFile, _ := gitHookScripts.ReadFile(sourceFilename)
-	store.OverwriteFile(destFilename, string(sourceFile))
+	utils.OverwriteFile(destFilename, string(sourceFile))
 
 	// Call `git-tree-post-{}.sh` in the `post-{}` hook.
-	contents := store.ReadFile(hookFile)
+	contents := utils.ReadFile(hookFile)
 	contents = addPrefixIfNoPattern(contents, `^#!.*`, "#!/bin/bash\n")
 	contents += fmt.Sprintf(`%s "$@"`, destFilename)
-	store.OverwriteFile(hookFile, contents)
+	utils.OverwriteFile(hookFile, contents)
 
 	// Mark `git-tree-post-{}.sh` and `.git/hooks/post-{}` as executable.
 	os.Chmod(destFilename, 0755)

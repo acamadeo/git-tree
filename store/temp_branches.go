@@ -9,6 +9,7 @@ import (
 
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/utils"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -32,7 +33,7 @@ func ReadTemporaryBranches(repo *git.Repository, filepath string) models.TempBra
 
 // Write temporary branches file.
 func WriteTemporaryBranches(tempMap models.TempBranchMap, filepath string) {
-	OverwriteFile(filepath, tempBranchMap2String(tempMap))
+	utils.OverwriteFile(filepath, tempBranchMap2String(tempMap))
 }
 
 func string2TempBranchMap(repo *git.Repository, input []string) models.TempBranchMap {
