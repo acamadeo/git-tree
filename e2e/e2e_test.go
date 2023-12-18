@@ -54,7 +54,6 @@ func runCompare() int {
 	return 0
 }
 
-// TODO: Add remaining test cases from the document.
 func TestMain(m *testing.M) {
 	os.Exit(testscript.RunMain(m, map[string]func() int{
 		"git-tree":   commands.Main,
