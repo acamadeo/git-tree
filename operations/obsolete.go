@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/acamadeo/git-tree/common"
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
@@ -21,7 +20,7 @@ import (
 
 func ObsoletePreRebase(repo *git.Repository) error {
 	// Add a new Obsolescence Action with the Rebase ActionType.
-	obsmapFile := common.ObsoleteMapPath(repo.Path())
+	obsmapFile := store.ObsoleteMapPath(repo.Path())
 	store.AppendObsolescenceAction(repo, obsmapFile, models.ActionTypeRebase)
 	return nil
 }
@@ -38,7 +37,7 @@ func ObsoletePostRewriteAmend(repo *git.Repository, lines []string) error {
 	// Commit actions and Amend actions both start with a `pre-commit` hook. If we
 	// receive `post-rewrite.amend` after `pre-commit`, we know this is an Amend
 	// action, not a Commit action.
-	obsmapFile := common.ObsoleteMapPath(repo.Path())
+	obsmapFile := store.ObsoleteMapPath(repo.Path())
 	if store.LastObsolescenceActionType(repo, obsmapFile) == models.ActionTypeCommit {
 		store.SetLastObsolescenceActionType(repo, obsmapFile, models.ActionTypeAmend)
 	}
@@ -71,7 +70,7 @@ func ObsoletePreCommit(repo *git.Repository) error {
 	if headCommit.ParentCount() > 0 {
 		headParent = headCommit.ParentId(0).String()
 	}
-	utils.OverwriteFile(common.PreCommitParentPath(repo.Path()), headParent)
+	utils.OverwriteFile(store.PreCommitParentPath(repo.Path()), headParent)
 
 	// If an interactive rebase is in-progress, `pre-commit` was triggered
 	// within the rebase. Don't add a new action.
@@ -82,7 +81,7 @@ func ObsoletePreCommit(repo *git.Repository) error {
 	// Add a new Obsolescence Action. We assume it's a Commit action by default.
 	// If it was an Amend action, we'll modify the type of this action when the
 	// `post-rewrite.amend` hook fires.
-	obsmapFile := common.ObsoleteMapPath(repo.Path())
+	obsmapFile := store.ObsoleteMapPath(repo.Path())
 	store.AppendObsolescenceAction(repo, obsmapFile, models.ActionTypeCommit)
 	return nil
 }
@@ -97,7 +96,7 @@ func ObsoletePostCommit(repo *git.Repository) error {
 	headRef, _ := repo.Head()
 	headCommit, _ := repo.LookupCommit(headRef.Target())
 
-	preCommitParentPath := common.PreCommitParentPath(repo.Path())
+	preCommitParentPath := store.PreCommitParentPath(repo.Path())
 	preCommitParent := utils.ReadFile(preCommitParentPath)
 	defer os.Remove(preCommitParentPath)
 
@@ -118,7 +117,7 @@ func ObsoletePostCommit(repo *git.Repository) error {
 		HookType:  models.PostCommit,
 	}
 
-	obsmapFile := common.ObsoleteMapPath(repo.Path())
+	obsmapFile := store.ObsoleteMapPath(repo.Path())
 	return store.AppendEntriesToLastObsolescenceAction(repo, obsmapFile, entry)
 }
 
@@ -159,6 +158,6 @@ func appendEntriesToObsoleteMap(repo *git.Repository, lines []string, hookType m
 		})
 	}
 
-	obsmapFile := common.ObsoleteMapPath(repo.Path())
+	obsmapFile := store.ObsoleteMapPath(repo.Path())
 	return store.AppendEntriesToLastObsolescenceAction(repo, obsmapFile, obsmapEntries...)
 }

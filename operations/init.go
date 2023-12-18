@@ -6,7 +6,6 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/acamadeo/git-tree/common"
 	gitutil "github.com/acamadeo/git-tree/git"
 	"github.com/acamadeo/git-tree/models"
 	"github.com/acamadeo/git-tree/store"
@@ -41,7 +40,7 @@ func Init(repo *git.Repository, branches ...*git.Branch) error {
 	// Construct a branch map from the branches and store the branch map in our
 	// file.
 	branchMap := models.BranchMapFromRepo(repo, rootBranch, branches)
-	store.WriteBranchMap(branchMap, common.BranchMapPath(repo.Path()))
+	store.WriteBranchMap(branchMap, store.BranchMapPath(repo.Path()))
 
 	// Install `post-commit` and `post-rewrite` git-hooks.
 	installGitHooks(repo)
@@ -60,7 +59,7 @@ func createRootBranch(repo *git.Repository, branches []*git.Branch) (*git.Branch
 	}
 
 	rootCommit, _ := repo.LookupCommit(rootOid)
-	return repo.CreateBranch(common.GitTreeRootBranch, rootCommit, false)
+	return repo.CreateBranch(store.GitTreeRootBranch, rootCommit, false)
 }
 
 func branchOids(branches []*git.Branch) []*git.Oid {

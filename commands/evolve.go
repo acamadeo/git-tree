@@ -47,9 +47,9 @@ func validateEvolve(context *Context) error {
 }
 
 func runEvolve(context *Context) error {
-	obsmap := store.ReadObsolescenceMap(context.Repo, common.ObsoleteMapPath(context.Repo.Path()))
+	obsmap := store.ReadObsolescenceMap(context.Repo, store.ObsoleteMapPath(context.Repo.Path()))
 
-	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
+	branchMap := store.ReadBranchMap(context.Repo, store.BranchMapPath(context.Repo.Path()))
 	commits := gitutil.LocalCommitsFromBranches(context.Repo, branchMap.Root, branchMap.ListBranches()...)
 
 	// If there are no obsolete commits in the repository, notify the user that

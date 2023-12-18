@@ -46,7 +46,7 @@ func runBranch(context *Context, args []string) error {
 		return fmt.Errorf("Could not create branch: %s.", err.Error())
 	}
 
-	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
+	branchMap := store.ReadBranchMap(context.Repo, store.BranchMapPath(context.Repo.Path()))
 
 	// Add the new branch as a child of the head branch in the branch map.
 	headRef, _ := context.Repo.Head()
@@ -56,7 +56,7 @@ func runBranch(context *Context, args []string) error {
 	branchMap.Children[headBranch] = append(branchMap.Children[headBranch], newBranch)
 
 	// Rewrite the branch map file to disk.
-	branchFile := common.BranchMapPath(context.Repo.Path())
+	branchFile := store.BranchMapPath(context.Repo.Path())
 	store.WriteBranchMap(branchMap, branchFile)
 
 	// Checkout the new branch.
@@ -82,7 +82,7 @@ func validateBranchArgs(context *Context, args []string) error {
 	}
 
 	// Check if you are on a tip commit.
-	branchMap := store.ReadBranchMap(context.Repo, common.BranchMapPath(context.Repo.Path()))
+	branchMap := store.ReadBranchMap(context.Repo, store.BranchMapPath(context.Repo.Path()))
 	if !common.OnTipCommit(context.Repo, branchMap) {
 		headCommit, _ := context.Repo.Head()
 		return fmt.Errorf("HEAD commit %q is not pointed to by any tracked branches.", gitutil.ReferenceShortHash(headCommit))
