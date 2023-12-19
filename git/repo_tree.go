@@ -36,12 +36,12 @@ func (l commitList) add(oid git.Oid) commitList {
 //
 // TODO: Add support for merge commits.
 type RepoTree struct {
-	repo *git.Repository
-	root git.Oid
+	Repo *git.Repository
+	Root git.Oid
 	// Map from each commit to its children.
 	//
 	// The list of children are sorted in ascending order by the Oid value.
-	commitChildren map[git.Oid]commitList
+	CommitChildren map[git.Oid]commitList
 	// Map each commit to branches that point to them. The branches are sorted
 	// alphabetically by branch name.
 	branches map[git.Oid][]string
@@ -49,11 +49,20 @@ type RepoTree struct {
 
 // Returns a list of Oid's for each child of the given `commit`.
 func (r *RepoTree) FindChildren(commit git.Oid) []git.Oid {
-	children := r.commitChildren[commit]
+	children := r.CommitChildren[commit]
 
 	ret := make([]git.Oid, len(children))
 	copy(ret, children)
 	return ret
+}
+
+// Returns true if commit `a` is an ancestor of commit `b`.
+//
+// TODO: Consider moving this under `gitutil` if it's not used elsewhere in this
+// file!
+func (r *RepoTree) IsAncestor(a *git.Commit, b *git.Commit) bool {
+	ancestorOid, _ := r.Repo.MergeBase(a.Id(), b.Id())
+	return a.Id().Equal(ancestorOid)
 }
 
 func findRepoTreeRoot(repo *git.Repository) git.Oid {
@@ -167,17 +176,17 @@ func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Bra
 	}
 
 	return &RepoTree{
-		repo:           repo,
-		root:           rootOid,
-		commitChildren: createCommitChildren(repo, root, branches...),
+		Repo:           repo,
+		Root:           rootOid,
+		CommitChildren: createCommitChildren(repo, root, branches...),
 		branches:       createBranches(repo, root, branches...),
 	}
 }
 
 func isIdenticalRecurse(nodeA git.Oid, treeA *RepoTree, nodeB git.Oid, treeB *RepoTree) bool {
 	// Check whether the current node is identical.
-	commitA, _ := treeA.repo.LookupCommit(&nodeA)
-	commitB, _ := treeB.repo.LookupCommit(&nodeB)
+	commitA, _ := treeA.Repo.LookupCommit(&nodeA)
+	commitB, _ := treeB.Repo.LookupCommit(&nodeB)
 
 	if commitA.Message() != commitB.Message() {
 		return false
@@ -187,8 +196,8 @@ func isIdenticalRecurse(nodeA git.Oid, treeA *RepoTree, nodeB git.Oid, treeB *Re
 	}
 
 	// Check that each child is identical.
-	childrenA := treeA.commitChildren[nodeA]
-	childrenB := treeB.commitChildren[nodeB]
+	childrenA := treeA.CommitChildren[nodeA]
+	childrenB := treeB.CommitChildren[nodeB]
 
 	if len(childrenA) != len(childrenB) {
 		return false
@@ -203,7 +212,7 @@ func isIdenticalRecurse(nodeA git.Oid, treeA *RepoTree, nodeB git.Oid, treeB *Re
 }
 
 func isIdentical(a *RepoTree, b *RepoTree) bool {
-	return isIdenticalRecurse(a.root, a, b.root, b)
+	return isIdenticalRecurse(a.Root, a, b.Root, b)
 }
 
 // Returns true if both repo's have the same branches and commits.
