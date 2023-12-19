@@ -6,6 +6,11 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
+func CommitByOid(repo *git.Repository, oid git.Oid) *git.Commit {
+	commit, _ := repo.LookupCommit(&oid)
+	return commit
+}
+
 func CommitByReference(repo *git.Repository, ref *git.Reference) *git.Commit {
 	commit, _ := repo.LookupCommit(ref.Target())
 	return commit
