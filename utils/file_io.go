@@ -43,6 +43,12 @@ func ReadFile(filename string) string {
 	return strings.TrimSuffix(string(bytes), "\n")
 }
 
+// Add `contents` and a newline to the start of the file.
+func PrependToFile(filename string, contents string) {
+	existingContents := ReadFile(filename)
+	OverwriteFile(filename, contents+"\n"+existingContents)
+}
+
 // Add a newline and append `contents` to the file.
 func AppendToFile(filename string, contents string) {
 	existingContents := ReadFile(filename)

@@ -99,21 +99,12 @@ func installGitHook(hookFile string, sourceFilename string, destFilename string)
 
 	// Call `git-tree-post-{}.sh` in the `post-{}` hook.
 	contents := utils.ReadFile(hookFile)
-	contents = addPrefixIfNoPattern(contents, `^#!.*`, "#!/bin/bash\n")
-	contents += fmt.Sprintf(`%s "$@"`, destFilename)
-	utils.OverwriteFile(hookFile, contents)
+	if matched, _ := regexp.MatchString(`^#!.*`, contents); !matched {
+		utils.PrependToFile(hookFile, "#!/bin/bash")
+	}
+	utils.AppendToFile(hookFile, fmt.Sprintf(`%s "$@"`, destFilename))
 
 	// Mark `git-tree-post-{}.sh` and `.git/hooks/post-{}` as executable.
 	os.Chmod(destFilename, 0755)
 	os.Chmod(hookFile, 0755)
-}
-
-// Prepend `contents` with `prefix` if `contents` does not contain the regex
-// `pattern`.
-func addPrefixIfNoPattern(contents string, pattern string, prefix string) string {
-	matched, _ := regexp.MatchString(pattern, contents)
-	if !matched {
-		return prefix + contents
-	}
-	return contents
 }
