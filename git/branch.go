@@ -61,3 +61,8 @@ func nameWithNumber(name string, number int) string {
 	}
 	return fmt.Sprintf("%s-%d", name, number)
 }
+
+func AnnotatedCommitFromBranch(repo *git.Repository, branch *git.Branch) *git.AnnotatedCommit {
+	annotatedCommit, _ := repo.AnnotatedCommitFromRef(branch.Reference)
+	return annotatedCommit
+}

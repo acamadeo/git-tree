@@ -34,9 +34,9 @@ func InteractiveRebaseInProgress(repo *git.Repository) bool {
 }
 
 func InitRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) (*git.Rebase, error) {
-	toMoveAC := annotatedCommit(repo, *toMove)
-	parentAC := annotatedCommit(repo, parent)
-	ontoAC := annotatedCommit(repo, onto)
+	toMoveAC := AnnotatedCommitFromBranch(repo, *toMove)
+	parentAC := AnnotatedCommitFromBranch(repo, parent)
+	ontoAC := AnnotatedCommitFromBranch(repo, onto)
 
 	return repo.InitRebase(toMoveAC, parentAC, ontoAC, rebaseOptions())
 }
@@ -116,11 +116,6 @@ func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **g
 
 func OpenRebase(repo *git.Repository) (*git.Rebase, error) {
 	return repo.OpenRebase(rebaseOptions())
-}
-
-func annotatedCommit(repo *git.Repository, branch *git.Branch) *git.AnnotatedCommit {
-	annotatedCommit, _ := repo.AnnotatedCommitFromRef(branch.Reference)
-	return annotatedCommit
 }
 
 func rebaseOptions() *git.RebaseOptions {
