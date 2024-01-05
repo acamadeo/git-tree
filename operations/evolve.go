@@ -12,8 +12,9 @@ import (
 // algorithm is working in English!!
 
 type evolveRunner struct {
-	repoTree  *gitutil.RepoTree
-	obsChains obsolescenceChains
+	repoTree        *gitutil.RepoTree
+	obsChains       obsolescenceChains
+	tempBranchNames []string
 }
 
 // Reconcile any troubled commits within the repository.
@@ -22,47 +23,49 @@ func Evolve(repoTree *gitutil.RepoTree, obsmap *models.ObsolescenceMap) error {
 		repoTree:  repoTree,
 		obsChains: buildObsolescenceChains(repoTree, obsmap),
 	}
-	return runner.Execute(repoTree.Root, nil)
+	return runner.Execute(gitutil.CommitByOid(repoTree.Repo, repoTree.Root))
 }
 
-func (r *evolveRunner) Execute(commitOid git.Oid, rebaseHead *git.Oid) error {
-	return r.executeRecurse(commitOid, rebaseHead)
+func (r *evolveRunner) Execute(root *git.Commit) error {
+	// TODO: We may only need one temp branch. If the tree splits at some point,
+	// we need to be able to point the branch to the current commit. If we can't
+	// do that, we'll need to create more temp branches for every fork in the
+	// tree.
+	branchName := gitutil.UniqueBranchName(r.repoTree.Repo, "git-tree-evolve-head")
+	head, _ := r.repoTree.Repo.CreateBranch(branchName, root, false)
+	r.tempBranchNames = append(r.tempBranchNames, branchName)
+	defer r.cleanupTempBranches()
+
+	return r.executeRecurse(root, head)
 }
 
 // Recursive evolve function, which is run on each commit in the `RepoTree`.
-func (r *evolveRunner) executeRecurse(commitOid git.Oid, rebaseHead *git.Oid) error {
+func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead *git.Branch) error {
 	// Find the obsolescence chain, if any, where this commit got obsoleted.
-	commit := gitutil.CommitByOid(r.repoTree.Repo, commitOid)
 	obsChain := r.obsChains.FindChainWithObsoleteCommit(commit)
 
-	commitsToRebase := []*git.Commit{commit}
-	newRebaseHead := rebaseHead
 	if obsChain != nil {
 		// The current commit is obsolete.
 
-		// Resolve any rebases in the obsolescence chain. We receive a list of
-		// commits in the resolved version of the chain. The last of these is
-		// the commit that descendant commits should rebase onto.
-		commitsToRebase = r.resolveObsolescences(*obsChain)
-		newRebaseHead = commitsToRebase[len(commitsToRebase)-1].Id()
+		// Resolve any rebases in the obsolescence chain. `evolveHead` points to
+		//  the last commit resolved commit of the chain.
+		r.resolveObsolescences(*obsChain, &evolveHead)
 
-		// We've addressed all the obsolescences in this chain. Skip ahead to
-		// the final commit in the obsolescence chain.
-		commitOid = *obsChain.obsoleted[len(obsChain.obsoleted)-1].Id()
-	}
-
-	if rebaseHead != nil {
-		// Rebase `commitsToRebase` onto the old `rebaseHead`.
-		rebaseHeadCommit := gitutil.CommitByOid(r.repoTree.Repo, *rebaseHead)
+		// The obsolescence chain is resolved. Skip to final commit in the chain.
+		commit = obsChain.obsoleted[len(obsChain.obsoleted)-1]
+	} else {
+		// Rebase the current commit onto `evolveHead`. `evolveHead` points to
+		// the last commit that was rebased.
 		// TODO: Handle errors!
-		rebaseCommits(r.repoTree.Repo, commitsToRebase[0], commitsToRebase[len(commitsToRebase)-1], rebaseHeadCommit)
+		rebaseCommits(r.repoTree.Repo, commit, commit, &evolveHead)
 	}
 
-	for _, child := range r.repoTree.FindChildren(commitOid) {
+	for _, childOid := range r.repoTree.FindChildren(*commit.Id()) {
 		// Abort early if evolve failed for any children.
 		//
 		// TODO: Is this the error behavior we want??
-		if err := r.executeRecurse(child, newRebaseHead); err != nil {
+		child := gitutil.CommitByOid(r.repoTree.Repo, childOid)
+		if err := r.executeRecurse(child, evolveHead); err != nil {
 			return err
 		}
 	}
@@ -74,50 +77,35 @@ func (r *evolveRunner) executeRecurse(commitOid git.Oid, rebaseHead *git.Oid) er
 // Returns a list of commits in the resolved version of the chain.
 //
 // TODO: Consider whether this function should return an error!
-func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain) []*git.Commit {
-	var rebaseHead *git.Commit
-	resolvedCommits := []*git.Commit{}
-
+//
+// NEXT: Consider whether this function should accept the `evolveHead` branch (and just add onto it as it resolves the obsChain)!
+//   - Make sure to save my work as a new commit! Don't amend the previous implementation in case we need it!
+func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveHead **git.Branch) {
+	// QUESTION: Is this and the closing statement in the function needed??
+	head := *evolveHead
 	// Go through each commit on the obsoleter side of the chain, checking if it
 	// has been obsoleted itself.
 	for i := 0; i < len(thisChain.obsoleter); i++ {
 		obsoleter := thisChain.obsoleter[i]
-		obsChain := r.obsChains.FindChainWithObsoleteCommit(obsoleter)
-
-		// The first time we see an obsolete commit in the chain...
-		if rebaseHead == nil && obsChain != nil {
+		if obsChain := r.obsChains.FindChainWithObsoleteCommit(obsoleter); obsChain != nil {
 			// Resolve the obsolescences. Fast-forward past any obsolete commits
 			// in this chain and continue iterating.
-			//
-			// TODO: Maybe should have a better name than `commitsToRebase`!!
-			commitsToRebase := r.resolveObsolescences(*obsChain)
+			r.resolveObsolescences(*obsChain, &head)
 			i = lastObsoleteIdx(i, thisChain, *obsChain)
-			rebaseHead = commitsToRebase[len(commitsToRebase)-1]
-			resolvedCommits = append(resolvedCommits, commitsToRebase...)
-			continue
+		} else {
+			// This commit is not obsolete; add it to the head branch.
+			rebaseCommits(r.repoTree.Repo, obsoleter, obsoleter, &head)
 		}
-
-		// If an obsolete commit has been found, any commit afterwards must be
-		// rebased onto the ultimate sucessor (`rebaseHead`).
-		if rebaseHead != nil {
-			commitsToRebase := []*git.Commit{obsoleter}
-			obsChain = r.obsChains.FindChainWithObsoleteCommit(obsoleter)
-			if obsChain != nil {
-				commitsToRebase = r.resolveObsolescences(*obsChain)
-				i = lastObsoleteIdx(i, thisChain, *obsChain)
-			}
-			rebaseHead = commitsToRebase[len(commitsToRebase)-1]
-
-			rebasedCommits := rebaseCommits(r.repoTree.Repo, commitsToRebase[0], commitsToRebase[len(commitsToRebase)-1], rebaseHead)
-			resolvedCommits = append(resolvedCommits, rebasedCommits...)
-			continue
-		}
-
-		// There hasn't been an obsolete commit, and this commit isn't obsolete either.
-		resolvedCommits = append(resolvedCommits, obsoleter)
 	}
 
-	return resolvedCommits
+	*evolveHead = head
+}
+
+func (r *evolveRunner) cleanupTempBranches() {
+	for _, branchName := range r.tempBranchNames {
+		branch, _ := r.repoTree.Repo.LookupBranch(branchName, git.BranchLocal)
+		branch.Delete()
+	}
 }
 
 // Return the index of the last commit in `thisChain` that was obsoleted by
@@ -131,18 +119,27 @@ func lastObsoleteIdx(index int, thisChain, obsChain obsolescenceChain) int {
 	return index - 1
 }
 
-// Rebase the sequence of commits from `start` to `end` onto commit `onto`.
+// Rebase the sequence of commits from `start` to `end` onto branch `onto`.
 //
 // NOTE: `start` and `end` are inclusive.
+//
+// NOTE TO SELF: Afterwards, branch `onto` should point to the rebased commit.
+
+// NOTE TO SELF: We definitely need to rebase in case moving the commit over
+// results in merge conflicts!
 //
 // TODO: Move this into `rebase_tree`, or refactor rebase_tree to do something like this.
 //
 // TODO: This should probably return an error...
-func rebaseCommits(repo *git.Repository, start *git.Commit, end *git.Commit, onto *git.Commit) []*git.Commit {
+func rebaseCommits(repo *git.Repository, start *git.Commit, end *git.Commit, onto **git.Branch) []*git.Commit {
+	// rebase := gitutil.InitRebase(repo)
+
 	// DEBUG
+	ontoOid := (*onto).Target()
+	ontoCommit, _ := repo.LookupCommit(ontoOid)
 	fmt.Printf("Rebasing commits [%s..%s] onto %s\n",
 		gitutil.CommitShortHash(start),
 		gitutil.CommitShortHash(end),
-		gitutil.CommitShortHash(onto))
+		gitutil.CommitShortHash(ontoCommit))
 	return []*git.Commit{}
 }
