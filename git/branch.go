@@ -62,7 +62,17 @@ func nameWithNumber(name string, number int) string {
 	return fmt.Sprintf("%s-%d", name, number)
 }
 
+func UpdateBranchTarget(branch **git.Branch, target *git.Oid) {
+	msg := fmt.Sprintf("[git-tree] update branch target for %s", BranchName(*branch))
+	newRef, _ := (*branch).SetTarget(target, msg)
+	*branch = newRef.Branch()
+}
+
+func CreateBranchAtCommit(repo *git.Repository, commit *git.Commit, name string) *git.Branch {
+	branch, _ := repo.CreateBranch(UniqueBranchName(repo, name), commit, false)
+	return branch
+}
+
 func AnnotatedCommitFromBranch(repo *git.Repository, branch *git.Branch) *git.AnnotatedCommit {
-	annotatedCommit, _ := repo.AnnotatedCommitFromRef(branch.Reference)
-	return annotatedCommit
+	return AnnotatedCommitForReference(repo, branch.Reference)
 }

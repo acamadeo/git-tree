@@ -2,6 +2,7 @@ package gitutil
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	git "github.com/libgit2/git2go/v34"
 )
@@ -48,6 +49,14 @@ func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches .
 		commits = append(commits, commit)
 	}
 	return commits
+}
+
+func CreateReferenceAtCommit(repo *git.Repository, commit *git.Commit, name string) *git.Reference {
+	logMessage := fmt.Sprintf(
+		"Created reference %q pointing to commit %s",
+		name, CommitShortHash(commit))
+	ref, _ := repo.References.Create("refs/heads/"+name, commit.Id(), false, logMessage)
+	return ref
 }
 
 func CommitShortHash(commit *git.Commit) string {

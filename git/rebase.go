@@ -41,6 +41,62 @@ func InitRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Bra
 	return repo.InitRebase(toMoveAC, parentAC, ontoAC, rebaseOptions())
 }
 
+func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) RebaseResult {
+	rebase, err := InitRebase(repo, parent, onto, toMove)
+	if err != nil {
+		err = fmt.Errorf("Error initializing rebase: %s\n", err)
+		return RebaseResult{Type: RebaseError, Error: err}
+	}
+
+	rebaseResult := Rebase(repo, rebase)
+
+	if rebaseResult.Type == RebaseSuccess {
+		// libgit2 does not update the target of `toMove` branch after rebase. Look
+		// up the branch again to get the updated target.
+		toMoveName := BranchName(*toMove)
+		toMoveNew, _ := repo.LookupBranch(toMoveName, git.BranchLocal)
+		*toMove = toMoveNew
+	}
+	return rebaseResult
+}
+
+// TODO: Consider having this accept two Commit's and manage the references and AnnotatedCommits in here!
+func InitRebase_CommitsOntoBranch(repo *git.Repository, start, end *git.AnnotatedCommit, onto **git.Branch) (*git.Rebase, error) {
+	ontoAC := AnnotatedCommitFromBranch(repo, *onto)
+	return repo.InitRebase(end, start, ontoAC, rebaseOptions())
+}
+
+// TODO: Consider consolidating some of the machinery here with
+//   - InitAndRunRebase
+func InitAndRunRebase_CommitsOntoBranch(repo *git.Repository, parent, toMove *git.Branch, onto **git.Branch) RebaseResult {
+	rebaseResult := InitAndRunRebase(repo, parent, *onto, &toMove)
+	if rebaseResult.Type == RebaseSuccess {
+		// NEXT: Update `onto` to point to the new location of `toMove`!
+		UpdateBranchTarget(onto, toMove.Target())
+	}
+	return rebaseResult
+
+	// rebase, err := InitRebase_CommitsOntoBranch(repo, parent, toMove, onto)
+	// if err != nil {
+	// 	err = fmt.Errorf("Error initializing rebase: %s\n", err)
+	// 	return RebaseResult{Type: RebaseError, Error: err}
+	// }
+
+	// rebaseResult := Rebase(repo, rebase)
+
+	// if rebaseResult.Type == RebaseSuccess {
+	// 	// NEXT: Update `onto` to point to the new location of `toMove`!
+	// 	(*onto).SetTarget(toMove.Id(), "Update `onto` branch after rebase")
+
+	// 	// // libgit2 does not update the target of `onto` branch after rebase. Look
+	// 	// // up the branch again to get the updated target.
+	// 	// ontoName := BranchName(*onto)
+	// 	// ontoNew, _ := repo.LookupBranch(ontoName, git.BranchLocal)
+	// 	// *onto = ontoNew
+	// }
+	// return rebaseResult
+}
+
 // Returns the result of the rebase.
 func Rebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
 	// Perform each operation in the rebase. Breaks with an error when there
@@ -50,6 +106,7 @@ func Rebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
 		rebaseOp, err := rebase.Next()
 		rebaseError = err
 		if err != nil {
+			fmt.Println(err)
 			break
 		}
 		if err := commitPatch(repo, rebase, rebaseOp); err != nil {
@@ -93,25 +150,6 @@ func processRebaseError(rebaseError error, continuing bool) RebaseResult {
 		return RebaseResult{Type: RebaseMergeConflict}
 	}
 	return RebaseResult{Type: RebaseError, Error: rebaseError}
-}
-
-func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) RebaseResult {
-	rebase, err := InitRebase(repo, parent, onto, toMove)
-	if err != nil {
-		err = fmt.Errorf("Error initializing rebase: %s\n", err)
-		return RebaseResult{Type: RebaseError, Error: err}
-	}
-
-	rebaseResult := Rebase(repo, rebase)
-
-	if rebaseResult.Type == RebaseSuccess {
-		// libgit2 does not update the target of `toMove` branch after rebase. Look
-		// up the branch again to get the updated target.
-		toMoveName := BranchName(*toMove)
-		toMoveNew, _ := repo.LookupBranch(toMoveName, git.BranchLocal)
-		*toMove = toMoveNew
-	}
-	return rebaseResult
 }
 
 func OpenRebase(repo *git.Repository) (*git.Rebase, error) {

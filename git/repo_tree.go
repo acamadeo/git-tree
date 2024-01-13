@@ -35,6 +35,13 @@ func (l commitList) add(oid git.Oid) commitList {
 //   - Sort the names of the branches associated with a particular commit.
 //
 // TODO: Add support for merge commits.
+//   - NOTE: libgit2 rebase might not work if the commit history has merge commits
+//     https://github.com/libgit2/libgit2/blob/198a1b209a929389c739a8a6abef13e717fdfda9/src/libgit2/rebase.c#L818
+//   - NOTE: We could ask users to avoid using `git merge` to sync with the
+//     upstream repo. Our `git tree sync` should *rebase* (not merge) working
+//     changes onto main HEAD.
+//   - - Down the line, we should get all the operations working even if there are
+//     merge commits.
 type RepoTree struct {
 	Repo *git.Repository
 	Root git.Oid
@@ -53,6 +60,15 @@ func (r *RepoTree) FindChildren(commit git.Oid) []git.Oid {
 
 	ret := make([]git.Oid, len(children))
 	copy(ret, children)
+	return ret
+}
+
+// Returns a list of branches that point to the given `commit`.
+func (r *RepoTree) FindBranches(commit git.Oid) []string {
+	branches := r.branches[commit]
+
+	ret := make([]string, len(branches))
+	copy(ret, branches)
 	return ret
 }
 
