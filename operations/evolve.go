@@ -14,14 +14,16 @@ import (
 type evolveRunner struct {
 	repoTree        *gitutil.RepoTree
 	obsChains       obsolescenceChains
+	headBranch      string
 	tempBranchNames []string
 }
 
 // Reconcile any troubled commits within the repository.
 func Evolve(repoTree *gitutil.RepoTree, obsmap *models.ObsolescenceMap) error {
 	runner := evolveRunner{
-		repoTree:  repoTree,
-		obsChains: buildObsolescenceChains(repoTree, obsmap),
+		repoTree:   repoTree,
+		obsChains:  buildObsolescenceChains(repoTree, obsmap),
+		headBranch: gitutil.BranchName(gitutil.HeadBranch(repoTree.Repo)),
 	}
 	return runner.Execute(gitutil.CommitByOid(repoTree.Repo, repoTree.Root))
 }
@@ -34,7 +36,7 @@ func (r *evolveRunner) Execute(root *git.Commit) error {
 	branchName := gitutil.UniqueBranchName(r.repoTree.Repo, "git-tree-evolve-head")
 	head, _ := r.repoTree.Repo.CreateBranch(branchName, root.Parent(0), false)
 	r.tempBranchNames = append(r.tempBranchNames, branchName)
-	defer r.cleanupTempBranches()
+	defer r.cleanup()
 
 	return r.executeRecurse(root, &head)
 }
@@ -131,7 +133,11 @@ func (r *evolveRunner) findBranchesAtCommit(commit *git.Commit) []*git.Branch {
 	return branches
 }
 
-func (r *evolveRunner) cleanupTempBranches() {
+func (r *evolveRunner) cleanup() {
+	// Switch back to the original HEAD branch.
+	gitutil.CheckoutBranchByName(r.repoTree.Repo, r.headBranch)
+
+	// Remove temporary branches.
 	for _, branchName := range r.tempBranchNames {
 		branch, _ := r.repoTree.Repo.LookupBranch(branchName, git.BranchLocal)
 		branch.Delete()
@@ -174,16 +180,20 @@ func rebaseCommits(repo *git.Repository, start *git.Commit, end *git.Commit, ont
 	startParent := start.Parent(0)
 	startParentBranch := gitutil.CreateBranchAtCommit(repo, startParent, "git-tree-evolve-commit-start")
 	endBranch := gitutil.CreateBranchAtCommit(repo, end, "git-tree-evolve-commit-end")
-	defer startParentBranch.Delete()
-	defer endBranch.Delete()
 
 	// Rebase commits `startRef` onto branch `onto`.
 	// TODO: Handle error!!
 	result := gitutil.InitAndRunRebase_CommitsOntoBranch(
 		repo,
 		startParentBranch,
-		endBranch,
+		&endBranch,
 		onto)
+
+	// Clean-up branches
+	gitutil.CheckoutBranch(repo, *onto)
+	startParentBranch.Delete()
+	endBranch.Delete()
+
 	// TODO: Actually handle this error!
 	if result.Type == gitutil.RebaseError {
 		fmt.Printf("Error during rebase: %v\n", result.Error)

@@ -68,11 +68,11 @@ func InitRebase_CommitsOntoBranch(repo *git.Repository, start, end *git.Annotate
 
 // TODO: Consider consolidating some of the machinery here with
 //   - InitAndRunRebase
-func InitAndRunRebase_CommitsOntoBranch(repo *git.Repository, parent, toMove *git.Branch, onto **git.Branch) RebaseResult {
-	rebaseResult := InitAndRunRebase(repo, parent, *onto, &toMove)
+func InitAndRunRebase_CommitsOntoBranch(repo *git.Repository, parent *git.Branch, toMove, onto **git.Branch) RebaseResult {
+	rebaseResult := InitAndRunRebase(repo, parent, *onto, toMove)
 	if rebaseResult.Type == RebaseSuccess {
 		// NEXT: Update `onto` to point to the new location of `toMove`!
-		UpdateBranchTarget(onto, toMove.Target())
+		UpdateBranchTarget(onto, (*toMove).Target())
 	}
 	return rebaseResult
 
