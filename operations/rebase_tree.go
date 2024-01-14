@@ -222,7 +222,7 @@ func (r *rebaseTreeRunner) executeRecurse(parent, onto, toMove *git.Branch) Reba
 		// gets interrupted (here or in a downstream branch).
 		tempBranch = r.createTempBranch(toMove)
 
-		rebaseResult := gitutil.InitAndRunRebase(r.repo, parent, onto, &toMove)
+		rebaseResult := gitutil.Rebase(r.repo, parent, onto, &toMove)
 
 		// Pause the rebase if we encountered an error.
 		if rebaseResult.Type == gitutil.RebaseError {

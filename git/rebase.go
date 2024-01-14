@@ -33,22 +33,23 @@ func InteractiveRebaseInProgress(repo *git.Repository) bool {
 	return utils.FileExists(filename)
 }
 
-func InitRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) (*git.Rebase, error) {
+func initRebase(repo *git.Repository, upstream, onto *git.Branch, toMove **git.Branch) (*git.Rebase, error) {
 	toMoveAC := AnnotatedCommitFromBranch(repo, *toMove)
-	parentAC := AnnotatedCommitFromBranch(repo, parent)
+	upstreamAC := AnnotatedCommitFromBranch(repo, upstream)
 	ontoAC := AnnotatedCommitFromBranch(repo, onto)
 
-	return repo.InitRebase(toMoveAC, parentAC, ontoAC, rebaseOptions())
+	return repo.InitRebase(toMoveAC, upstreamAC, ontoAC, rebaseOptions())
 }
 
-func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **git.Branch) RebaseResult {
-	rebase, err := InitRebase(repo, parent, onto, toMove)
+// Rebase commits in branch `toMove` that aren't in branch `upstream` onto branch `onto`.
+func Rebase(repo *git.Repository, upstream, onto *git.Branch, toMove **git.Branch) RebaseResult {
+	rebase, err := initRebase(repo, upstream, onto, toMove)
 	if err != nil {
 		err = fmt.Errorf("Error initializing rebase: %s\n", err)
 		return RebaseResult{Type: RebaseError, Error: err}
 	}
 
-	rebaseResult := Rebase(repo, rebase)
+	rebaseResult := doRebase(repo, rebase)
 
 	if rebaseResult.Type == RebaseSuccess {
 		// libgit2 does not update the target of `toMove` branch after rebase. Look
@@ -60,49 +61,23 @@ func InitAndRunRebase(repo *git.Repository, parent, onto *git.Branch, toMove **g
 	return rebaseResult
 }
 
-// TODO: Consider having this accept two Commit's and manage the references and AnnotatedCommits in here!
-func InitRebase_CommitsOntoBranch(repo *git.Repository, start, end *git.AnnotatedCommit, onto **git.Branch) (*git.Rebase, error) {
-	ontoAC := AnnotatedCommitFromBranch(repo, *onto)
-	return repo.InitRebase(end, start, ontoAC, rebaseOptions())
-}
-
-// TODO: Consider consolidating some of the machinery here with
-//   - InitAndRunRebase
-func InitAndRunRebase_CommitsOntoBranch(repo *git.Repository, parent *git.Branch, toMove, onto **git.Branch) RebaseResult {
-	rebaseResult := InitAndRunRebase(repo, parent, *onto, toMove)
+// Rebase commits in branch `toMove` that aren't in branch `upstream` onto branch `onto`.
+//
+// Updates `onto` to point to the same commit as the newly rebased `toMove` branch.
+func Rebase_UpdateOnto(repo *git.Repository, upstream *git.Branch, onto, toMove **git.Branch) RebaseResult {
+	rebaseResult := Rebase(repo, upstream, *onto, toMove)
 	if rebaseResult.Type == RebaseSuccess {
-		// NEXT: Update `onto` to point to the new location of `toMove`!
 		UpdateBranchTarget(onto, (*toMove).Target())
 	}
 	return rebaseResult
-
-	// rebase, err := InitRebase_CommitsOntoBranch(repo, parent, toMove, onto)
-	// if err != nil {
-	// 	err = fmt.Errorf("Error initializing rebase: %s\n", err)
-	// 	return RebaseResult{Type: RebaseError, Error: err}
-	// }
-
-	// rebaseResult := Rebase(repo, rebase)
-
-	// if rebaseResult.Type == RebaseSuccess {
-	// 	// NEXT: Update `onto` to point to the new location of `toMove`!
-	// 	(*onto).SetTarget(toMove.Id(), "Update `onto` branch after rebase")
-
-	// 	// // libgit2 does not update the target of `onto` branch after rebase. Look
-	// 	// // up the branch again to get the updated target.
-	// 	// ontoName := BranchName(*onto)
-	// 	// ontoNew, _ := repo.LookupBranch(ontoName, git.BranchLocal)
-	// 	// *onto = ontoNew
-	// }
-	// return rebaseResult
 }
 
 // Returns the result of the rebase.
-func Rebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
+func doRebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
 	// Perform each operation in the rebase. Breaks with an error when there
 	// are no more operations in the rebase.
 	var rebaseError error
-	for true {
+	for {
 		rebaseOp, err := rebase.Next()
 		rebaseError = err
 		if err != nil {
@@ -134,7 +109,7 @@ func ContinueRebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
 		return result
 	}
 
-	return Rebase(repo, rebase)
+	return doRebase(repo, rebase)
 }
 
 // Process the rebaseError into a RebaseResult. `continuing` is true if we are

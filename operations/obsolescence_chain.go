@@ -82,7 +82,7 @@ func uniqueCommits(repo *git.Repository, commits []*git.Commit) []*git.Commit {
 // the commit graph.
 func sortCommitsInGraph(repoTree *gitutil.RepoTree, commits []*git.Commit) []*git.Commit {
 	sort.Slice(commits, func(i, j int) bool {
-		return repoTree.IsAncestor(commits[i], commits[j])
+		return gitutil.IsAncestor(repoTree.Repo, commits[i], commits[j])
 	})
 	return commits
 }
