@@ -64,8 +64,8 @@ func TestMain(m *testing.M) {
 	}))
 }
 
-func TestGitTree(t *testing.T) {
+func TestE2eObsolete(t *testing.T) {
 	testscript.Run(t, testscript.Params{
-		Dir: "testdata",
+		Dir: "obsolete",
 	})
 }
