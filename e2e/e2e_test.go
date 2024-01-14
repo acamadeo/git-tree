@@ -69,3 +69,9 @@ func TestE2eObsolete(t *testing.T) {
 		Dir: "obsolete",
 	})
 }
+
+func TestE2eEvolve(t *testing.T) {
+	testscript.Run(t, testscript.Params{
+		Dir: "evolve",
+	})
+}
