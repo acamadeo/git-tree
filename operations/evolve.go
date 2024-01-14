@@ -64,11 +64,11 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 		// Rebase the current commit onto `evolveHead`. `evolveHead` points to
 		// the last commit that was rebased.
 		// TODO: Handle errors!
-		rebaseCommits(r.repoTree.Repo, commit, commit, evolveHead)
+		rebaseCommit(r.repoTree.Repo, commit, evolveHead)
 		obsoletedBranches = r.findBranchesAtCommit(commit)
 	}
 
-	// Update any branches that pointed to the current commit.
+	// Update any branches that pointed to the current commit (or its ultimate successor).
 	for _, branch := range obsoletedBranches {
 		gitutil.UpdateBranchTarget(&branch, (*evolveHead).Target())
 	}
@@ -90,9 +90,6 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 // Returns a list of commits in the resolved version of the chain.
 //
 // TODO: Consider whether this function should return an error!
-//
-// NEXT: Consider whether this function should accept the `evolveHead` branch (and just add onto it as it resolves the obsChain)!
-//   - Make sure to save my work as a new commit! Don't amend the previous implementation in case we need it!
 func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveHead **git.Branch) {
 	evolveOid := (*evolveHead).Target()
 	evolveCommit, _ := r.repoTree.Repo.LookupCommit(evolveOid)
@@ -108,7 +105,7 @@ func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveH
 			i = lastObsoleteIdx(i, thisChain, *obsChain)
 		} else {
 			// This commit is not obsolete; add it to the head branch.
-			rebaseCommits(r.repoTree.Repo, obsoleter, obsoleter, evolveHead)
+			rebaseCommit(r.repoTree.Repo, obsoleter, evolveHead)
 		}
 	}
 }
@@ -164,37 +161,31 @@ func lastObsoleteIdx(index int, thisChain, obsChain obsolescenceChain) int {
 // NOTE TO SELF: We definitely need to rebase in case moving the commit over
 // results in merge conflicts!
 //
-// TODO: Move this into `rebase_tree`, or refactor rebase_tree to do something like this.
-//
 // TODO: This should probably return an error...
-func rebaseCommits(repo *git.Repository, start *git.Commit, end *git.Commit, onto **git.Branch) {
+func rebaseCommit(repo *git.Repository, commit *git.Commit, onto **git.Branch) {
 	// DEBUG
 	ontoOid := (*onto).Target()
 	ontoCommit, _ := repo.LookupCommit(ontoOid)
-	fmt.Printf("Rebasing commits [%s..%s] onto %s\n",
-		gitutil.CommitShortHash(start),
-		gitutil.CommitShortHash(end),
+	fmt.Printf("Rebasing commit [%s] onto %s\n",
+		gitutil.CommitShortHash(commit),
 		gitutil.CommitShortHash(ontoCommit))
 
-	// NOTE TO SELF: BE SURE TO DELETE THESE REFERENCES!
-	startParent := start.Parent(0)
-	startParentBranch := gitutil.CreateBranchAtCommit(repo, startParent, "git-tree-evolve-commit-start")
-	endBranch := gitutil.CreateBranchAtCommit(repo, end, "git-tree-evolve-commit-end")
+	startParent := commit.Parent(0)
+	startParentBranch := gitutil.CreateBranchAtCommit(
+		repo, startParent, "git-tree-evolve-commit-start")
+	endBranch := gitutil.CreateBranchAtCommit(
+		repo, commit, "git-tree-evolve-commit-end")
+	defer func() {
+		gitutil.CheckoutBranch(repo, *onto)
+		startParentBranch.Delete()
+		endBranch.Delete()
+	}()
 
-	// Rebase commits `startRef` onto branch `onto`.
-	// TODO: Handle error!!
-	result := gitutil.InitAndRunRebase_CommitsOntoBranch(
-		repo,
-		startParentBranch,
-		&endBranch,
-		onto)
+	// Rebase commit `commit` onto branch `onto`.
+	result := gitutil.Rebase_UpdateOnto(
+		repo, startParentBranch, onto, &endBranch)
 
-	// Clean-up branches
-	gitutil.CheckoutBranch(repo, *onto)
-	startParentBranch.Delete()
-	endBranch.Delete()
-
-	// TODO: Actually handle this error!
+	// TODO: Actually handle the error!
 	if result.Type == gitutil.RebaseError {
 		fmt.Printf("Error during rebase: %v\n", result.Error)
 	}

@@ -72,15 +72,6 @@ func (r *RepoTree) FindBranches(commit git.Oid) []string {
 	return ret
 }
 
-// Returns true if commit `a` is an ancestor of commit `b`.
-//
-// TODO: Consider moving this under `gitutil` if it's not used elsewhere in this
-// file!
-func (r *RepoTree) IsAncestor(a *git.Commit, b *git.Commit) bool {
-	ancestorOid, _ := r.Repo.MergeBase(a.Id(), b.Id())
-	return a.Id().Equal(ancestorOid)
-}
-
 func findRepoTreeRoot(repo *git.Repository) git.Oid {
 	revWalk := InitWalkWithAllBranches(repo)
 

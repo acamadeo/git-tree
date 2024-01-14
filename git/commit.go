@@ -51,6 +51,12 @@ func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches .
 	return commits
 }
 
+// Returns true if commit `a` is an ancestor of commit `b`.
+func IsAncestor(repo *git.Repository, a *git.Commit, b *git.Commit) bool {
+	ancestorOid, _ := repo.MergeBase(a.Id(), b.Id())
+	return a.Id().Equal(ancestorOid)
+}
+
 func CreateReferenceAtCommit(repo *git.Repository, commit *git.Commit, name string) *git.Reference {
 	logMessage := fmt.Sprintf(
 		"Created reference %q pointing to commit %s",
