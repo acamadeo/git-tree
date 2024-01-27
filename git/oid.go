@@ -1,6 +1,12 @@
 package gitutil
 
-import git "github.com/libgit2/git2go/v34"
+import (
+	git "github.com/libgit2/git2go/v34"
+)
+
+func OidShortHash(oid git.Oid) string {
+	return oid.String()[:shortHashLength]
+}
 
 // Returns 0 if Oid values are the same. Otherwise, returns -1 if a < b, or +1 if a > b.
 func compareOids(a git.Oid, b git.Oid) int {

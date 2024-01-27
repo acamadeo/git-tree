@@ -67,7 +67,7 @@ func Rebase(repo *git.Repository, upstream, onto *git.Branch, toMove **git.Branc
 func Rebase_UpdateOnto(repo *git.Repository, upstream *git.Branch, onto, toMove **git.Branch) RebaseResult {
 	rebaseResult := Rebase(repo, upstream, *onto, toMove)
 	if rebaseResult.Type == RebaseSuccess {
-		UpdateBranchTarget(onto, (*toMove).Target())
+		UpdateBranchTarget(repo, onto, (*toMove).Target())
 	}
 	return rebaseResult
 }
@@ -81,7 +81,6 @@ func doRebase(repo *git.Repository, rebase *git.Rebase) RebaseResult {
 		rebaseOp, err := rebase.Next()
 		rebaseError = err
 		if err != nil {
-			fmt.Println(err)
 			break
 		}
 		if err := commitPatch(repo, rebase, rebaseOp); err != nil {

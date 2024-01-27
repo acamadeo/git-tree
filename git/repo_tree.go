@@ -6,19 +6,6 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
-// A list of commits that does not have duplicate entries.
-type commitList []git.Oid
-
-func (l commitList) add(oid git.Oid) commitList {
-	for _, o := range l {
-		if o == oid {
-			return l
-		}
-	}
-	l = append(l, oid)
-	return l
-}
-
 // An in-memory representation of the local branches and commits.
 //
 // Git does not provide an easy way to find all the children of a particular
@@ -48,7 +35,7 @@ type RepoTree struct {
 	// Map from each commit to its children.
 	//
 	// The list of children are sorted in ascending order by the Oid value.
-	CommitChildren map[git.Oid]commitList
+	CommitChildren map[git.Oid]CommitSet
 	// Map each commit to branches that point to them. The branches are sorted
 	// alphabetically by branch name.
 	branches map[git.Oid][]string
@@ -87,17 +74,17 @@ func findRepoTreeRoot(repo *git.Repository) git.Oid {
 	return rootOid
 }
 
-func initCommitChildren(allCommits []*git.Commit) map[git.Oid]commitList {
-	ret := map[git.Oid]commitList{}
+func initCommitChildren(allCommits []*git.Commit) map[git.Oid]CommitSet {
+	ret := map[git.Oid]CommitSet{}
 	for _, commit := range allCommits {
-		ret[*commit.Id()] = commitList{}
+		ret[*commit.Id()] = CommitSet{}
 	}
 	return ret
 }
 
 // Sorts every commit's children ascending order by the Oid value.
-func sortCommitMap(repo *git.Repository, commitChildren map[git.Oid]commitList) map[git.Oid]commitList {
-	sortedMap := map[git.Oid]commitList{}
+func sortCommitMap(repo *git.Repository, commitChildren map[git.Oid]CommitSet) map[git.Oid]CommitSet {
+	sortedMap := map[git.Oid]CommitSet{}
 	for commit, children := range commitChildren {
 		sort.Slice(children, func(i, j int) bool {
 			commitA, _ := repo.LookupCommit(&children[i])
@@ -109,21 +96,21 @@ func sortCommitMap(repo *git.Repository, commitChildren map[git.Oid]commitList) 
 	return sortedMap
 }
 
-func createCommitChildren(repo *git.Repository, root *git.Branch, branches ...*git.Branch) map[git.Oid]commitList {
-	commitChildren := initCommitChildren(LocalCommitsFromBranches(repo, root, branches...))
+func createCommitChildren(repo *git.Repository, root git.Oid, branches ...*git.Branch) map[git.Oid]CommitSet {
+	commitChildren := initCommitChildren(LocalCommitsFromBranches_RootOid(repo, &root, branches...))
 
 	// Iterate through the commits, constructing a commit descendancy tree.
 	revWalk := InitWalkWithAllBranches(repo)
 	revWalk.Iterate(func(commit *git.Commit) bool {
-		// Stop adding commits to RepoTree once we hit `root` (if specified).
-		if root != nil && *root.Target() == *commit.Id() {
+		// Stop adding commits to RepoTree once we hit `root`.
+		if root == *commit.Id() {
 			return false
 		}
 
 		// Add this commit as a child of its parent.
 		if commit.ParentCount() > 0 {
 			children := commitChildren[*commit.ParentId(0)]
-			children = children.add(*commit.Id())
+			children = children.Add(*commit.Id())
 			commitChildren[*commit.ParentId(0)] = children
 		}
 
@@ -143,9 +130,9 @@ func sortBranchesByName(branches map[git.Oid][]string) map[git.Oid][]string {
 	return ret
 }
 
-func createBranches(repo *git.Repository, root *git.Branch, branches ...*git.Branch) map[git.Oid][]string {
+func createBranches(repo *git.Repository, root git.Oid, branches ...*git.Branch) map[git.Oid][]string {
 	commitToBranches := map[git.Oid][]string{}
-	for _, commit := range LocalCommitsFromBranches(repo, root, branches...) {
+	for _, commit := range LocalCommitsFromBranches_RootOid(repo, &root, branches...) {
 		commitToBranches[*commit.Id()] = []string{}
 	}
 
@@ -170,10 +157,10 @@ func createBranches(repo *git.Repository, root *git.Branch, branches ...*git.Bra
 // `branches` are provided, the RepoTree will include commits from *all local branches*.
 // If `branches` are provided, it is assumed that `root` is nil or an ancestor of
 // all `branches`.
-func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Branch) *RepoTree {
+func CreateRepoTree(repo *git.Repository, root *git.Oid, branches ...*git.Branch) *RepoTree {
 	var rootOid git.Oid
 	if root != nil {
-		rootOid = *root.Target()
+		rootOid = *root
 	} else {
 		rootOid = findRepoTreeRoot(repo)
 	}
@@ -185,8 +172,8 @@ func CreateRepoTree(repo *git.Repository, root *git.Branch, branches ...*git.Bra
 	return &RepoTree{
 		Repo:           repo,
 		Root:           rootOid,
-		CommitChildren: createCommitChildren(repo, root, branches...),
-		branches:       createBranches(repo, root, branches...),
+		CommitChildren: createCommitChildren(repo, rootOid, branches...),
+		branches:       createBranches(repo, rootOid, branches...),
 	}
 }
 

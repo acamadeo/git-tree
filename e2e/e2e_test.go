@@ -5,13 +5,23 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/acamadeo/git-tree/commands"
 	"github.com/acamadeo/git-tree/utils"
 	"github.com/rogpeppe/go-internal/testscript"
 )
 
+const timeout = 5 * time.Second
+
 var reCarriageReturn = regexp.MustCompile(`\r`)
+
+func testscriptParams(dir string) testscript.Params {
+	return testscript.Params{
+		Dir:      dir,
+		Deadline: time.Now().Add(timeout),
+	}
+}
 
 // Paste the contents in file `$EDITOR_INPUT` into Git's editor file.
 func runEditor() int {
@@ -65,13 +75,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2eObsolete(t *testing.T) {
-	testscript.Run(t, testscript.Params{
-		Dir: "obsolete",
-	})
+	testscript.Run(t, testscriptParams("obsolete"))
 }
 
 func TestE2eEvolve(t *testing.T) {
-	testscript.Run(t, testscript.Params{
-		Dir: "evolve",
-	})
+	testscript.Run(t, testscriptParams("evolve"))
 }
