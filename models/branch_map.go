@@ -182,6 +182,22 @@ func (b *BranchMap) ListBranches() []*git.Branch {
 	return branches
 }
 
+func (b *BranchMap) ListBranchNames() []string {
+	branchNames := map[string]bool{}
+	for branch, children := range b.Children {
+		branchNames[gitutil.BranchName(branch)] = true
+		for _, child := range children {
+			branchNames[gitutil.BranchName(child)] = true
+		}
+	}
+
+	branches := []string{}
+	for branchName := range branchNames {
+		branches = append(branches, branchName)
+	}
+	return branches
+}
+
 // Returns the parent of a branch.
 func (b *BranchMap) FindParent(branchName string) *git.Branch {
 	for parent, children := range b.Children {

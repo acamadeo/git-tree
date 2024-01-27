@@ -49,25 +49,11 @@ func Init(repo *git.Repository, branches ...*git.Branch) error {
 }
 
 func createRootBranch(repo *git.Repository, branches []*git.Branch) (*git.Branch, error) {
-	var rootOid *git.Oid
-	if len(branches) == 1 {
-		rootOid = branches[0].Target()
-	} else {
-		// Find the commit that will serve as the root of the git-tree. Create a new
-		// branch pointed to this commit.
-		rootOid, _ = repo.MergeBaseMany(branchOids(branches))
-	}
-
+	// Find the commit that will serve as the root of the git-tree. Create a new
+	// branch pointed to this commit.
+	rootOid := gitutil.MergeBaseMany_Branches(repo, branches...)
 	rootCommit, _ := repo.LookupCommit(rootOid)
 	return repo.CreateBranch(store.GitTreeRootBranch, rootCommit, false)
-}
-
-func branchOids(branches []*git.Branch) []*git.Oid {
-	oids := []*git.Oid{}
-	for _, branch := range branches {
-		oids = append(oids, branch.Target())
-	}
-	return oids
 }
 
 func installGitHooks(repo *git.Repository) {

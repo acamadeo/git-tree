@@ -50,7 +50,9 @@ func runEvolve(context *Context) error {
 	obsmap := store.ReadObsolescenceMap(context.Repo, store.ObsoleteMapPath(context.Repo.Path()))
 
 	branchMap := store.ReadBranchMap(context.Repo, store.BranchMapPath(context.Repo.Path()))
-	commits := gitutil.LocalCommitsFromBranches(context.Repo, branchMap.Root, branchMap.ListBranches()...)
+	branches := lookupBranches(context.Repo, branchMap.ListBranchNames()...)
+	root := gitutil.MergeBaseOctopus_Branches(context.Repo, branches...)
+	commits := gitutil.LocalCommitsFromBranches_RootOid(context.Repo, root, branches...)
 
 	// If there are no obsolete commits in the repository, notify the user that
 	// running `git-tree evolve` is a no-op.
@@ -59,7 +61,7 @@ func runEvolve(context *Context) error {
 		return nil
 	}
 
-	repoTree := gitutil.CreateRepoTree(context.Repo, branchMap.Root, branchMap.ListBranches()...)
+	repoTree := gitutil.CreateRepoTree(context.Repo, root, branches...)
 	return operations.Evolve(repoTree, obsmap)
 }
 
@@ -78,4 +80,13 @@ func anyObsoleteCommits(obsmap *models.ObsolescenceMap, localCommits []*git.Comm
 		}
 	}
 	return false
+}
+
+func lookupBranches(repo *git.Repository, branchNames ...string) []*git.Branch {
+	branches := []*git.Branch{}
+	for _, name := range branchNames {
+		branch, _ := repo.LookupBranch(name, git.BranchLocal)
+		branches = append(branches, branch)
+	}
+	return branches
 }

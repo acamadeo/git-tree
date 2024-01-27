@@ -22,7 +22,7 @@ type evolveRunner struct {
 func Evolve(repoTree *gitutil.RepoTree, obsmap *models.ObsolescenceMap) error {
 	runner := evolveRunner{
 		repoTree:   repoTree,
-		obsChains:  buildObsolescenceChains(repoTree, obsmap),
+		obsChains:  buildObsolescenceChains(repoTree.Repo, obsmap),
 		headBranch: gitutil.BranchName(gitutil.HeadBranch(repoTree.Repo)),
 	}
 	return runner.Execute(gitutil.CommitByOid(repoTree.Repo, repoTree.Root))
@@ -70,9 +70,10 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 
 	// Update any branches that pointed to the current commit (or its ultimate successor).
 	for _, branch := range obsoletedBranches {
-		gitutil.UpdateBranchTarget(&branch, (*evolveHead).Target())
+		gitutil.UpdateBranchTarget(r.repoTree.Repo, &branch, (*evolveHead).Target())
 	}
 
+	headTarget := (*evolveHead).Target()
 	for _, childOid := range r.repoTree.FindChildren(*commit.Id()) {
 		// Abort early if evolve failed for any children.
 		//
@@ -81,6 +82,8 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 		if err := r.executeRecurse(child, evolveHead); err != nil {
 			return err
 		}
+		// Restore `evolveHead` to current commit before proceeding.
+		gitutil.UpdateBranchTarget(r.repoTree.Repo, evolveHead, headTarget)
 	}
 	return nil
 }
@@ -93,7 +96,8 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveHead **git.Branch) {
 	evolveOid := (*evolveHead).Target()
 	evolveCommit, _ := r.repoTree.Repo.LookupCommit(evolveOid)
-	fmt.Printf("resolveObsolescences(%s, %s)\n", "<chain>", gitutil.CommitShortHash(evolveCommit))
+	fmt.Printf("resolveObsolescences(<chain>, %s), <chain>:\n", gitutil.CommitShortHash(evolveCommit))
+	fmt.Println(thisChain.String())
 	// Go through each commit on the obsoleter side of the chain, checking if it
 	// has been obsoleted itself.
 	for i := 0; i < len(thisChain.obsoleter); i++ {

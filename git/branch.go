@@ -67,10 +67,37 @@ func HeadBranch(repo *git.Repository) *git.Branch {
 	return headRef.Branch()
 }
 
-func UpdateBranchTarget(branch **git.Branch, target *git.Oid) {
+func MergeBaseMany_Branches(repo *git.Repository, branches ...*git.Branch) *git.Oid {
+	branchOids := branchOids(branches)
+	if len(branchOids) == 1 {
+		return branchOids[0]
+	}
+	root, _ := repo.MergeBaseMany(branchOids)
+	return root
+}
+
+func MergeBaseOctopus_Branches(repo *git.Repository, branches ...*git.Branch) *git.Oid {
+	branchOids := branchOids(branches)
+	if len(branchOids) == 1 {
+		return branchOids[0]
+	}
+	root, _ := repo.MergeBaseOctopus(branchOids)
+	return root
+}
+
+func UpdateBranchTarget(repo *git.Repository, branch **git.Branch, target *git.Oid) error {
+	commit, _ := repo.LookupCommit(target)
+	commitTree, _ := commit.Tree()
+
+	// Check out the working tree at the given branch.
+	if err := repo.CheckoutTree(commitTree, checkoutOpts()); err != nil {
+		return fmt.Errorf("Could not checkout tree: %s", err)
+	}
+
 	msg := fmt.Sprintf("[git-tree] update branch target for %s", BranchName(*branch))
 	newRef, _ := (*branch).SetTarget(target, msg)
 	*branch = newRef.Branch()
+	return nil
 }
 
 func CreateBranchAtCommit(repo *git.Repository, commit *git.Commit, name string) *git.Branch {
@@ -80,4 +107,17 @@ func CreateBranchAtCommit(repo *git.Repository, commit *git.Commit, name string)
 
 func AnnotatedCommitFromBranch(repo *git.Repository, branch *git.Branch) *git.AnnotatedCommit {
 	return AnnotatedCommitForReference(repo, branch.Reference)
+}
+
+func branchOids(branches []*git.Branch) []*git.Oid {
+	oidSet := map[git.Oid]*git.Oid{}
+	for _, branch := range branches {
+		oidSet[*branch.Target()] = branch.Target()
+	}
+
+	unique := []*git.Oid{}
+	for _, ptr := range oidSet {
+		unique = append(unique, ptr)
+	}
+	return unique
 }

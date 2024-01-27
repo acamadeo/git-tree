@@ -1,7 +1,6 @@
 package gitutil
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	git "github.com/libgit2/git2go/v34"
@@ -30,6 +29,15 @@ func AllLocalCommits(repo *git.Repository, root *git.Branch) []*git.Commit {
 //
 // If `root` is nil, the result will include commits from the entire history.
 func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches ...*git.Branch) []*git.Commit {
+	var rootOid *git.Oid
+	if root != nil {
+		rootOid = root.Target()
+	}
+	return LocalCommitsFromBranches_RootOid(repo, rootOid, branches...)
+}
+
+// Same as LocalCommitsFromBranches(), but `root` is a pointer to an Oid.
+func LocalCommitsFromBranches_RootOid(repo *git.Repository, root *git.Oid, branches ...*git.Branch) []*git.Commit {
 	// Create a walk that will include the tip commit of each provided branch.
 	revWalk := InitWalkWithBranches(repo, branches...)
 
@@ -39,7 +47,7 @@ func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches .
 		commitOidsSet[*commit.Id()] = true
 
 		// Stop adding commits once we hit `root` (if specified).
-		return root == nil || *root.Target() != *commit.Id()
+		return root == nil || !root.Equal(commit.Id())
 	})
 
 	// Lookup each commit in the set.
@@ -49,6 +57,15 @@ func LocalCommitsFromBranches(repo *git.Repository, root *git.Branch, branches .
 		commits = append(commits, commit)
 	}
 	return commits
+}
+
+func MergeBaseOctopus_Commits(repo *git.Repository, commits ...*git.Commit) *git.Oid {
+	commitOids := commitOids(commits)
+	if len(commitOids) == 1 {
+		return commitOids[0]
+	}
+	root, _ := repo.MergeBaseOctopus(commitOids)
+	return root
 }
 
 // Returns true if commit `a` is an ancestor of commit `b`.
@@ -66,7 +83,18 @@ func CreateReferenceAtCommit(repo *git.Repository, commit *git.Commit, name stri
 }
 
 func CommitShortHash(commit *git.Commit) string {
-	oid := commit.Id()
-	oidString := hex.EncodeToString(oid[:])
-	return oidString[:shortHashLength]
+	return OidShortHash(*commit.Id())
+}
+
+func commitOids(commits []*git.Commit) []*git.Oid {
+	oidSet := map[git.Oid]*git.Oid{}
+	for _, commit := range commits {
+		oidSet[*commit.Id()] = commit.Id()
+	}
+
+	unique := []*git.Oid{}
+	for _, ptr := range oidSet {
+		unique = append(unique, ptr)
+	}
+	return unique
 }
