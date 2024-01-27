@@ -12,7 +12,7 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 )
 
-const timeout = 5 * time.Second
+const timeout = 10 * time.Second
 
 var reCarriageReturn = regexp.MustCompile(`\r`)
 

@@ -85,6 +85,7 @@ jobs:
         go test -tags static,system_libgit2 -v ./...
       working-directory: ./main
 
+
   build-windows:
     runs-on: windows-latest
     defaults:

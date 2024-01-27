@@ -1,0 +1,104 @@
+# Evolve resolves commit graph after deleting commits
+# =====================================================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Specify the test interactive sequence editor program (used in `git rebase -i`).
+env GIT_SEQUENCE_EDITOR='seq_editor'
+
+# The test interactive editor should paste the instructions in `SEQ_EDITOR_INPUT`
+# into Git's instruction sheet.
+env SEQ_EDITOR_INPUT='.git/tree/rebase-instructs'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# BUG: This commit is needed to prevent a nil pointer dereference (getting the
+# parent of an initial commit). Fix the algorithm and remove this extra commit.
+exec write_file dummy.txt dummy
+exec git add .
+exec git commit -m 'Add dummy.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to first branch
+exec git checkout -b branch-1
+
+exec write_file treecko.txt treecko
+exec git add .
+exec git commit -m 'Add treecko.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file grovyle.txt grovyle
+exec git add .
+exec git commit -m 'Add grovyle.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file sceptile.txt sceptile
+exec git add .
+exec git commit -m 'Add sceptile.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file turtwig.txt turtwig
+exec git add .
+exec git commit -m 'Add turtwig.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to second branch
+exec git checkout -b branch-2
+
+exec write_file snivy.txt snivy
+exec git add .
+exec git commit -m 'Add snivy.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initialize git-tree
+exec git-tree init
+
+# Delete some commits in the graph.
+#
+# Initial:
+#
+#   initial ─── treecko ─── grovyle ─── sceptile ─── turtwig ─── snivy
+#
+# Result:
+#
+#   initial ─── treecko ─── turtwig ─── snivy
+#
+exec git checkout branch-1
+exec git rebase -i HEAD~4
+
+
+# --- TEST ---
+
+# Run evolve
+exec git-tree evolve
+
+# BUG: The old commit still exists in the repository, since it's pointed to by
+# branch `git-tree-root`. Fix `git-tree-root` target instead of dropping git-tree.
+exec git-tree drop
+
+# Compare the git log
+exec git log --oneline --graph --all --decorate
+cp stdout .git/actual-log
+exec compare .git/actual-log .git/golden-log
+
+
+-- .git/tree/rebase-instructs --
+pick 68f0d35 Add treecko.txt
+drop 64f5fcb Add grovyle.txt
+drop 689eb6b Add sceptile.txt
+pick 68f964b Add turtwig.txt
+-- .git/golden-log --
+* 946b717 (branch-2) Add snivy.txt
+* 052659c (HEAD -> branch-1) Add turtwig.txt
+* 68f0d35 Add treecko.txt
+* a7c56ea (master) Add dummy.txt
+* cbfe4ef initial commit
