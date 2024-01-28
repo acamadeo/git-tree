@@ -42,10 +42,11 @@ func (ocs *obsolescenceChains) FindChainWithObsoleteCommit(commit *git.Commit) *
 	return nil
 }
 
-func buildObsolescenceChains(repo *git.Repository, obsmap *models.ObsolescenceMap) obsolescenceChains {
+func buildObsolescenceChains(repo *git.Repository, obsmap *models.ObsolescenceMap, branchMap *models.BranchMap) obsolescenceChains {
+	branches := gitutil.LookupBranches(repo, branchMap.ListBranchNames()...)
 	chains := []obsolescenceChain{}
 	for _, action := range obsmap.Actions {
-		chains = append(chains, buildObsolescenceChain(repo, action))
+		chains = append(chains, buildObsolescenceChain(repo, branches, action))
 	}
 	return chains
 }
@@ -57,9 +58,10 @@ type commitTree struct {
 }
 
 // Steps to build obsolescence chain:
-//  1. Filter out any commits that are no longer referenced in the repo.
-//  2. Find the merge-base of all the commits that are listed. This is the root
+//  1. Find the merge-base of all the commits that are listed. This is the root
 //     commit.
+//  2. Filter out any intermediate commits that will eventually get
+//     garbage-collected.
 //  3. All the commits should be in one of 2 chains extending from the root
 //     commit. Make a tree (map[Oid][]Oid). When you add a commit, go through
 //     and add all its parents until you reach the root.
@@ -70,16 +72,18 @@ type commitTree struct {
 //     by a commit in the other chain. If so, this chain is obsoleted; the other
 //     is obsoleter.
 //  6. Return the two chains. The root should not appear in either chain.
-func buildObsolescenceChain(repo *git.Repository, action models.ObsolescenceAction) obsolescenceChain {
+func buildObsolescenceChain(repo *git.Repository, trackedBranches []*git.Branch, action models.ObsolescenceAction) obsolescenceChain {
 	commits := []*git.Commit{}
 	for _, entry := range action.Entries {
 		commits = append(commits, entry.Commit)
 		commits = append(commits, entry.Obsoleter)
 	}
+	commits = uniqueCommits(commits)
 
-	commits = filterStaleCommits(repo, uniqueCommits(repo, commits))
-
+	// Remove commits that aren't ancestors of the tracked branches.
 	root := gitutil.MergeBaseOctopus_Commits(repo, commits...)
+	trackedCommits := gitutil.LocalCommitsFromBranches_RootOid(repo, root, trackedBranches...)
+	commits = subtractCommits(commits, subtractCommits(commits, trackedCommits))
 
 	commitTree := createCommitTree(repo, root, commits)
 	fmt.Println("Commit tree:")
@@ -174,28 +178,33 @@ func pickObsoletedObsoleter(action models.ObsolescenceAction, leftChain, rightCh
 	return leftChain, rightChain
 }
 
-// Return a new list of commits that are still in the repo.
-func filterStaleCommits(repo *git.Repository, commits []*git.Commit) []*git.Commit {
-	ret := []*git.Commit{}
+func uniqueCommits(commits []*git.Commit) []*git.Commit {
+	oid2Commit := map[git.Oid]*git.Commit{}
 	for _, commit := range commits {
-		if c, _ := repo.LookupCommit(commit.Id()); c != nil {
-			ret = append(ret, commit)
-		}
-	}
-	return ret
-}
-
-func uniqueCommits(repo *git.Repository, commits []*git.Commit) []*git.Commit {
-	oidSet := map[git.Oid]bool{}
-	for _, c := range commits {
-		oidSet[*c.Id()] = true
+		oid2Commit[*commit.Id()] = commit
 	}
 
 	unique := []*git.Commit{}
-	for oid := range oidSet {
-		unique = append(unique, gitutil.CommitByOid(repo, oid))
+	for _, commit := range oid2Commit {
+		unique = append(unique, commit)
 	}
 	return unique
+}
+
+// Returns a list of commits from `a` that aren't in `b`.
+func subtractCommits(a []*git.Commit, b []*git.Commit) []*git.Commit {
+	oidsB := map[git.Oid]bool{}
+	for _, c := range b {
+		oidsB[*c.Id()] = true
+	}
+
+	ret := []*git.Commit{}
+	for _, c := range a {
+		if _, ok := oidsB[*c.Id()]; !ok {
+			ret = append(ret, c)
+		}
+	}
+	return ret
 }
 
 func (oc *obsolescenceChain) String() string {
