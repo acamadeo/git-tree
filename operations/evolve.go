@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	gitutil "github.com/acamadeo/git-tree/git"
-	"github.com/acamadeo/git-tree/models"
+	"github.com/acamadeo/git-tree/store"
 	git "github.com/libgit2/git2go/v34"
 )
 
@@ -19,10 +19,12 @@ type evolveRunner struct {
 }
 
 // Reconcile any troubled commits within the repository.
-func Evolve(repoTree *gitutil.RepoTree, obsmap *models.ObsolescenceMap) error {
+func Evolve(repoTree *gitutil.RepoTree) error {
+	obsmap := store.ReadObsolescenceMap(repoTree.Repo, store.ObsoleteMapPath(repoTree.Repo.Path()))
+	branchMap := store.ReadBranchMap(repoTree.Repo, store.BranchMapPath(repoTree.Repo.Path()))
 	runner := evolveRunner{
 		repoTree:   repoTree,
-		obsChains:  buildObsolescenceChains(repoTree.Repo, obsmap),
+		obsChains:  buildObsolescenceChains(repoTree.Repo, obsmap, branchMap),
 		headBranch: gitutil.BranchName(gitutil.HeadBranch(repoTree.Repo)),
 	}
 	return runner.Execute(gitutil.CommitByOid(repoTree.Repo, repoTree.Root))

@@ -24,6 +24,15 @@ func BranchName(branch *git.Branch) string {
 	return name
 }
 
+func LookupBranches(repo *git.Repository, branchNames ...string) []*git.Branch {
+	branches := []*git.Branch{}
+	for _, name := range branchNames {
+		branch, _ := repo.LookupBranch(name, git.BranchLocal)
+		branches = append(branches, branch)
+	}
+	return branches
+}
+
 // Returns true if branch `a` is an ancestor of branch `b`.
 func IsBranchAncestor(repo *git.Repository, a *git.Branch, b *git.Branch) bool {
 	commitOidA := a.Target()
