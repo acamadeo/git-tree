@@ -94,7 +94,8 @@ func MergeBaseOctopus_Branches(repo *git.Repository, branches ...*git.Branch) *g
 	return root
 }
 
-func UpdateBranchTarget(repo *git.Repository, branch **git.Branch, target *git.Oid) error {
+// Update `branch` to point to commit `target`.
+func MoveBranchTarget(repo *git.Repository, branch **git.Branch, target *git.Oid) error {
 	commit, _ := repo.LookupCommit(target)
 	commitTree, _ := commit.Tree()
 
