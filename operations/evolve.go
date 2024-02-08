@@ -45,13 +45,16 @@ func (r *evolveRunner) Execute(root *git.Commit) error {
 
 // Recursive evolve function, which is run on each commit in the `RepoTree`.
 func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branch) error {
-	var obsoletedBranches []*git.Branch
 	// Find the obsolescence chain, if any, where this commit got obsoleted.
 	obsChain := r.obsChains.FindChainWithObsoleteCommit(commit)
 
 	evolveOid := (*evolveHead).Target()
 	evolveCommit, _ := r.repoTree.Repo.LookupCommit(evolveOid)
 	fmt.Printf("executeRecurse(%s, %s)\n", gitutil.CommitShortHash(commit), gitutil.CommitShortHash(evolveCommit))
+
+	var obsoletedBranches []*git.Branch
+	var oneSidedStart *git.Oid
+	var oneSidedEnd *git.Oid
 	if obsChain != nil {
 		// The current commit is obsolete.
 
@@ -60,8 +63,14 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 		r.resolveObsolescences(*obsChain, evolveHead)
 		obsoletedBranches = r.findBranchesInObsChain(*obsChain)
 
-		// The obsolescence chain is resolved. Skip to final commit in the chain.
-		commit = obsChain.obsoleted[len(obsChain.obsoleted)-1]
+		if len(obsChain.obsoleted) == 0 {
+			// This is a one-sided chain. Skip to the end of the obsoleter side.
+			oneSidedStart = obsChain.obsoleter[0].Id()
+			oneSidedEnd = (*evolveHead).Target()
+		} else {
+			// The obsolescence chain is resolved. Skip to final commit in the chain.
+			commit = obsChain.obsoleted[len(obsChain.obsoleted)-1]
+		}
 	} else {
 		// Rebase the current commit onto `evolveHead`. `evolveHead` points to
 		// the last commit that was rebased.
@@ -76,7 +85,12 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 	}
 
 	headTarget := (*evolveHead).Target()
-	for _, childOid := range r.repoTree.FindChildren(*commit.Id()) {
+	commitChildren := gitutil.NewCommitSet(r.repoTree.FindChildren(*commit.Id())...)
+	if oneSidedStart != nil && oneSidedEnd != nil {
+		commitChildren = commitChildren.Remove(*oneSidedStart)
+		commitChildren = commitChildren.AddAll(r.repoTree.FindChildren(*oneSidedEnd)...)
+	}
+	for _, childOid := range commitChildren {
 		// Abort early if evolve failed for any children.
 		//
 		// TODO: Is this the error behavior we want??
@@ -100,6 +114,10 @@ func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveH
 	evolveCommit, _ := r.repoTree.Repo.LookupCommit(evolveOid)
 	fmt.Printf("resolveObsolescences(<chain>, %s), <chain>:\n", gitutil.CommitShortHash(evolveCommit))
 	fmt.Println(thisChain.String())
+
+	// Start out by rebasing the root of the chain onto `evolveHead`.
+	rebaseCommit(r.repoTree.Repo, thisChain.root, evolveHead)
+
 	// Go through each commit on the obsoleter side of the chain, checking if it
 	// has been obsoleted itself.
 	for i := 0; i < len(thisChain.obsoleter); i++ {
@@ -109,10 +127,11 @@ func (r *evolveRunner) resolveObsolescences(thisChain obsolescenceChain, evolveH
 			// in this chain and continue iterating.
 			r.resolveObsolescences(*obsChain, evolveHead)
 			i = lastObsoleteIdx(i, thisChain, *obsChain)
-		} else {
-			// This commit is not obsolete; add it to the head branch.
-			rebaseCommit(r.repoTree.Repo, obsoleter, evolveHead)
+			continue
 		}
+
+		// This commit is not obsolete; add it to the head branch.
+		rebaseCommit(r.repoTree.Repo, obsoleter, evolveHead)
 	}
 }
 
