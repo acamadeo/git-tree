@@ -81,15 +81,15 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 
 	// Update any branches that pointed to the current commit (or its ultimate successor).
 	for _, branch := range obsoletedBranches {
-		gitutil.UpdateBranchTarget(r.repoTree.Repo, &branch, (*evolveHead).Target())
+		gitutil.MoveBranchTarget(r.repoTree.Repo, &branch, (*evolveHead).Target())
 	}
 
-	headTarget := (*evolveHead).Target()
 	commitChildren := gitutil.NewCommitSet(r.repoTree.FindChildren(*commit.Id())...)
 	if oneSidedStart != nil && oneSidedEnd != nil {
 		commitChildren = commitChildren.Remove(*oneSidedStart)
 		commitChildren = commitChildren.AddAll(r.repoTree.FindChildren(*oneSidedEnd)...)
 	}
+	headTarget := (*evolveHead).Target()
 	for _, childOid := range commitChildren {
 		// Abort early if evolve failed for any children.
 		//
@@ -99,7 +99,7 @@ func (r *evolveRunner) executeRecurse(commit *git.Commit, evolveHead **git.Branc
 			return err
 		}
 		// Restore `evolveHead` to current commit before proceeding.
-		gitutil.UpdateBranchTarget(r.repoTree.Repo, evolveHead, headTarget)
+		gitutil.MoveBranchTarget(r.repoTree.Repo, evolveHead, headTarget)
 	}
 	return nil
 }

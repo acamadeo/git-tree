@@ -9,8 +9,6 @@ import (
 	git "github.com/libgit2/git2go/v34"
 )
 
-// TODO: Consider moving into a dedicated `evolve/` directory!
-
 // Represents the commits that obsoleted another set of commits in a Git action.
 type obsolescenceChain struct {
 	// The commit that the two commit chains extend from.
@@ -87,6 +85,9 @@ func buildObsolescenceChain(repo *git.Repository, trackedBranches []*git.Branch,
 	commits = uniqueCommits(commits)
 
 	// Remove commits that aren't ancestors of the tracked branches.
+	//
+	// TODO: This won't work if we delete a local upstream branch before
+	// evolving...
 	rootOid := gitutil.MergeBaseOctopus_Commits(repo, commits...)
 	trackedCommits := gitutil.LocalCommitsFromBranches_RootOid(repo, rootOid, trackedBranches...)
 	commits = subtractCommits(commits, subtractCommits(commits, trackedCommits))
@@ -94,8 +95,7 @@ func buildObsolescenceChain(repo *git.Repository, trackedBranches []*git.Branch,
 	commitTree := createCommitTree(repo, rootOid, commits)
 	fmt.Println("Commit tree:")
 	fmt.Println(commitTree)
-	// TODO: uncomment this!
-	// validateCommitTree(commitTree)
+	validateCommitTree(commitTree)
 
 	leftChain := flattenDescendantsToChain(repo, commitTree, 0)
 	rightChain := flattenDescendantsToChain(repo, commitTree, 1)
@@ -123,7 +123,8 @@ func createCommitTree(repo *git.Repository, root *git.Oid, commits []*git.Commit
 
 // The root node should have two children. All other commits should have 1 child.
 func validateCommitTree(commitTree commitTree) {
-	if len(commitTree.tree[commitTree.root]) != 2 {
+	rootChildren := len(commitTree.tree[commitTree.root])
+	if rootChildren < 1 || rootChildren > 2 {
 		log.Fatalf("Invalid commitTree: root has %d children\n", len(commitTree.tree[commitTree.root]))
 	}
 	for oid, children := range commitTree.tree {
@@ -135,14 +136,13 @@ func validateCommitTree(commitTree commitTree) {
 
 // Split the commit tree into the two chains extending from the root commit.
 func flattenDescendantsToChain(repo *git.Repository, commitTree commitTree, index int) []*git.Commit {
-	chain := []*git.Commit{}
-
 	// Return an empty chain if the root doesn't have children at `index`.
 	if index >= len(commitTree.tree[commitTree.root]) {
-		return chain
+		return []*git.Commit{}
 	}
 
 	oid := commitTree.tree[commitTree.root][index]
+	chain := []*git.Commit{}
 	for {
 		commit, _ := repo.LookupCommit(&oid)
 		chain = append(chain, commit)
@@ -163,6 +163,7 @@ func pickObsoletedObsoleter(action models.ObsolescenceAction, leftChain, rightCh
 		return leftChain, rightChain
 	}
 
+	// Create a set of the Oid's in each chain.
 	leftOids, rightOids := map[git.Oid]bool{}, map[git.Oid]bool{}
 	for _, commit := range leftChain {
 		leftOids[*commit.Id()] = true
