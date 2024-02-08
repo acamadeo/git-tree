@@ -1,0 +1,105 @@
+# Evolve works for nested amends
+# ==============================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# BUG: This commit is needed to prevent a nil pointer dereference (getting the
+# parent of an initial commit). Fix the algorithm and remove this extra commit.
+exec write_file dummy.txt dummy
+exec git add .
+exec git commit -m 'Add dummy.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initial:
+#
+#  [master] ─── [eevee] ─┬─ [vaporeon]
+#                        ├─ [jolteon]
+#                        └─ [flareon]
+#
+# Action:
+#  - Amend [eevee]
+#
+# Result:
+#  - Same tree but extending from amended commit
+
+# Add commits to first branch
+exec git checkout -b eevee
+
+exec write_file eevee.txt eevee
+exec git add .
+exec git commit -m 'Add eevee.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to vaporeon branch
+exec git checkout eevee
+exec git checkout -b vaporeon
+
+exec write_file vaporeon.txt vaporeon
+exec git add .
+exec git commit -m 'Add vaporeon.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to jolteon branch
+exec git checkout eevee
+exec git checkout -b jolteon
+
+exec write_file jolteon.txt jolteon
+exec git add .
+exec git commit -m 'Add jolteon.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to flareon branch
+exec git checkout eevee
+exec git checkout -b flareon
+
+exec write_file flareon.txt flareon
+exec git add .
+exec git commit -m 'Add flareon.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initialize git-tree
+exec git-tree init
+
+# Amend an upstream commit
+exec git checkout eevee
+exec git commit --amend -m 'Amend eevee.txt' --date $GIT_COMMITTER_DATE
+
+
+# --- TEST ---
+
+# Run evolve
+exec git-tree evolve
+
+# BUG: The old commit still exists in the repository, since it's pointed to by
+# branch `git-tree-root`. Fix `git-tree-root` target instead of dropping git-tree.
+exec git-tree drop
+
+# Compare the git log
+exec git log --oneline --graph --all --decorate
+cp stdout .git/actual-log
+exec compare .git/actual-log .git/golden-log
+
+
+-- .git/golden-log --
+* 592b7fb (flareon) Add flareon.txt
+| * 7b7641a (jolteon) Add jolteon.txt
+|/  
+| * d0c4e5c (vaporeon) Add vaporeon.txt
+|/  
+* cee417d (HEAD -> eevee) Amend eevee.txt
+* a7c56ea (master) Add dummy.txt
+* cbfe4ef initial commit

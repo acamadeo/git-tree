@@ -78,6 +78,10 @@ func TestE2eObsolete(t *testing.T) {
 	testscript.Run(t, testscriptParams("obsolete"))
 }
 
-func TestE2eEvolve(t *testing.T) {
-	testscript.Run(t, testscriptParams("evolve"))
+func TestE2eEvolveSimple(t *testing.T) {
+	testscript.Run(t, testscriptParams("evolve/simple"))
+}
+
+func TestE2eEvolveNested(t *testing.T) {
+	testscript.Run(t, testscriptParams("evolve/nested"))
 }

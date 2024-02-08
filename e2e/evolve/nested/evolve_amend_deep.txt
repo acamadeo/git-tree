@@ -1,0 +1,144 @@
+# Evolve works for nested amends
+# ==============================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# BUG: This commit is needed to prevent a nil pointer dereference (getting the
+# parent of an initial commit). Fix the algorithm and remove this extra commit.
+exec write_file dummy.txt dummy
+exec git add .
+exec git commit -m 'Add dummy.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initial:
+#
+#  [master] ─── [mew] ─┬─ [ralts] ───── [kirlia] ─┬─ [gardevoir]
+#                      |                          └─ [gallade]
+#                      └─ [snorunt] ─┬─ [glalie]
+#                                    └─ [froslass]
+#
+# Action:
+#  - Amend [mew]
+#
+# Result:
+#  - Same tree but extending from amended commit
+
+# Add commits to first branch
+exec git checkout -b mew
+
+exec write_file mew.txt mew
+exec git add .
+exec git commit -m 'Add mew.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to ralts branch
+exec git checkout -b ralts
+
+exec write_file ralts.txt ralts
+exec git add .
+exec git commit -m 'Add ralts.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to kirlia branch
+exec git checkout -b kirlia
+
+exec write_file kirlia.txt kirlia
+exec git add .
+exec git commit -m 'Add kirlia.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to gardevoir branch
+exec git checkout -b gardevoir
+
+exec write_file gardevoir.txt gardevoir
+exec git add .
+exec git commit -m 'Add gardevoir.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to gallade branch
+exec git checkout kirlia
+exec git checkout -b gallade
+
+exec write_file gallade.txt gallade
+exec git add .
+exec git commit -m 'Add gallade.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to snorunt branch
+exec git checkout mew
+exec git checkout -b snorunt
+
+exec write_file snorunt.txt snorunt
+exec git add .
+exec git commit -m 'Add snorunt.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to glalie branch
+exec git checkout -b glalie
+
+exec write_file glalie.txt glalie
+exec git add .
+exec git commit -m 'Add glalie.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to froslass branch
+exec git checkout snorunt
+exec git checkout -b froslass
+
+exec write_file froslass.txt froslass
+exec git add .
+exec git commit -m 'Add froslass.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initialize git-tree
+exec git-tree init
+
+# Amend an upstream commit
+exec git checkout mew
+exec git commit --amend -m 'Amend mew.txt' --date $GIT_COMMITTER_DATE
+
+
+# --- TEST ---
+
+# Run evolve
+exec git-tree evolve
+
+# BUG: The old commit still exists in the repository, since it's pointed to by
+# branch `git-tree-root`. Fix `git-tree-root` target instead of dropping git-tree.
+exec git-tree drop
+
+# Compare the git log
+exec git log --oneline --graph --all --decorate
+cp stdout .git/actual-log
+exec compare .git/actual-log .git/golden-log
+
+
+-- .git/golden-log --
+* d4e7301 (froslass) Add froslass.txt
+| * b1ee2dc (gallade) Add gallade.txt
+| | * 6aa3ed9 (gardevoir) Add gardevoir.txt
+| |/  
+| * 0a5e4b2 (kirlia) Add kirlia.txt
+| * 8959cc6 (ralts) Add ralts.txt
+| | * 854b21e (glalie) Add glalie.txt
+| |/  
+|/|   
+* | c52055a (snorunt) Add snorunt.txt
+|/  
+* 78fd09c (HEAD -> mew) Amend mew.txt
+* a7c56ea (master) Add dummy.txt
+* cbfe4ef initial commit
