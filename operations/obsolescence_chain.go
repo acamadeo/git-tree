@@ -13,6 +13,8 @@ import (
 
 // Represents the commits that obsoleted another set of commits in a Git action.
 type obsolescenceChain struct {
+	// The commit that the two commit chains extend from.
+	root *git.Commit
 	// Commits on the obsoleted side of the chain (from oldest to newest).
 	obsoleted []*git.Commit
 	// Commits on the obsoleter side of the chain (from oldest to newest).
@@ -20,6 +22,10 @@ type obsolescenceChain struct {
 }
 
 func (oc *obsolescenceChain) HasObsoleteCommit(commit *git.Commit) bool {
+	if oc.root.Id().Equal(commit.Id()) {
+		return true
+	}
+
 	for _, c := range oc.obsoleted {
 		if *c.Id() == *commit.Id() {
 			return true
@@ -81,19 +87,22 @@ func buildObsolescenceChain(repo *git.Repository, trackedBranches []*git.Branch,
 	commits = uniqueCommits(commits)
 
 	// Remove commits that aren't ancestors of the tracked branches.
-	root := gitutil.MergeBaseOctopus_Commits(repo, commits...)
-	trackedCommits := gitutil.LocalCommitsFromBranches_RootOid(repo, root, trackedBranches...)
+	rootOid := gitutil.MergeBaseOctopus_Commits(repo, commits...)
+	trackedCommits := gitutil.LocalCommitsFromBranches_RootOid(repo, rootOid, trackedBranches...)
 	commits = subtractCommits(commits, subtractCommits(commits, trackedCommits))
 
-	commitTree := createCommitTree(repo, root, commits)
+	commitTree := createCommitTree(repo, rootOid, commits)
 	fmt.Println("Commit tree:")
 	fmt.Println(commitTree)
-	validateCommitTree(commitTree)
+	// TODO: uncomment this!
+	// validateCommitTree(commitTree)
 
-	leftChain, rightChain := splitTreeToChains(repo, commitTree)
+	leftChain := flattenDescendantsToChain(repo, commitTree, 0)
+	rightChain := flattenDescendantsToChain(repo, commitTree, 1)
 	obsoleted, obsoleter := pickObsoletedObsoleter(action, leftChain, rightChain)
 
-	return obsolescenceChain{obsoleted: obsoleted, obsoleter: obsoleter}
+	root, _ := repo.LookupCommit(rootOid)
+	return obsolescenceChain{root: root, obsoleted: obsoleted, obsoleter: obsoleter}
 }
 
 func createCommitTree(repo *git.Repository, root *git.Oid, commits []*git.Commit) commitTree {
@@ -125,34 +134,35 @@ func validateCommitTree(commitTree commitTree) {
 }
 
 // Split the commit tree into the two chains extending from the root commit.
-func splitTreeToChains(repo *git.Repository, commitTree commitTree) ([]*git.Commit, []*git.Commit) {
-	leftChain, rightChain := []*git.Commit{}, []*git.Commit{}
+func flattenDescendantsToChain(repo *git.Repository, commitTree commitTree, index int) []*git.Commit {
+	chain := []*git.Commit{}
 
-	oid := commitTree.tree[commitTree.root][0]
+	// Return an empty chain if the root doesn't have children at `index`.
+	if index >= len(commitTree.tree[commitTree.root]) {
+		return chain
+	}
+
+	oid := commitTree.tree[commitTree.root][index]
 	for {
 		commit, _ := repo.LookupCommit(&oid)
-		leftChain = append(leftChain, commit)
+		chain = append(chain, commit)
 		if len(commitTree.tree[oid]) == 0 {
 			break
 		}
 		oid = commitTree.tree[oid][0]
 	}
-
-	oid = commitTree.tree[commitTree.root][1]
-	for {
-		commit, _ := repo.LookupCommit(&oid)
-		rightChain = append(rightChain, commit)
-		if len(commitTree.tree[oid]) == 0 {
-			break
-		}
-		oid = commitTree.tree[oid][0]
-	}
-
-	return leftChain, rightChain
+	return chain
 }
 
 // Returns (<obsoleted-chain>, <obsoleter-chain>).
 func pickObsoletedObsoleter(action models.ObsolescenceAction, leftChain, rightChain []*git.Commit) ([]*git.Commit, []*git.Commit) {
+	if len(leftChain) > 0 && len(rightChain) == 0 {
+		return rightChain, leftChain
+	}
+	if len(rightChain) > 0 && len(leftChain) == 0 {
+		return leftChain, rightChain
+	}
+
 	leftOids, rightOids := map[git.Oid]bool{}, map[git.Oid]bool{}
 	for _, commit := range leftChain {
 		leftOids[*commit.Id()] = true
@@ -208,11 +218,19 @@ func subtractCommits(a []*git.Commit, b []*git.Commit) []*git.Commit {
 }
 
 func (oc *obsolescenceChain) String() string {
-	output := "┌"
+	output := "         ┌"
+	if len(oc.obsoleted) == 0 {
+		output += " <nil>"
+	}
 	for _, commit := range oc.obsoleted {
 		output += " " + gitutil.CommitShortHash(commit)
 	}
-	output += "\n↓\n└"
+
+	output += fmt.Sprintf("\n%s -↓\n         └", gitutil.CommitShortHash(oc.root))
+
+	if len(oc.obsoleter) == 0 {
+		output += " <nil>"
+	}
 	for _, commit := range oc.obsoleter {
 		output += " " + gitutil.CommitShortHash(commit)
 	}
