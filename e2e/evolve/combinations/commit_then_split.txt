@@ -1,0 +1,146 @@
+# Evolve resolves commit graph after amend + split
+# ================================================
+
+# --- SETUP ---
+
+# Add directory with `git` executable to PATH
+env PATH=$PATH${:}/usr/bin/
+
+# Specify commit timestamp so commit hashes are fixed.
+env GIT_COMMITTER_DATE='01 Jan 2023 00:00:00 UTC'
+
+# Specify the test interactive sequence editor program (used in `git rebase -i`).
+env GIT_SEQUENCE_EDITOR='seq_editor'
+
+# The test interactive editor should paste the instructions in `SEQ_EDITOR_INPUT`
+# into Git's instruction sheet.
+env SEQ_EDITOR_INPUT='.git/tree/rebase-instructs'
+
+# Setup the Git repository
+exec git init
+exec git config user.email "test@example.com"
+exec git config user.name "Test"
+exec write_file README.txt readme
+exec git add .
+exec git commit -m 'initial commit' --date $GIT_COMMITTER_DATE
+
+# BUG: This commit is needed to prevent a nil pointer dereference (getting the
+# parent of an initial commit). Fix the algorithm and remove this extra commit.
+exec write_file dummy.txt dummy
+exec git add .
+exec git commit -m 'Add dummy.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initial:
+#
+#  [master] ─── [treecko] ─┬─ [torterra]
+#                          ├─ [infernape]
+#                          └─ [empoleon]
+#
+# Action:
+#  1. Add more commits onto [treecko]
+#  2. Split [torterra] into more commits
+#
+# Result:
+#  [master] ─── (treecko) ─── (grovyle) ─── [sceptile] ─┬─ (turtwig) ─── (grotle) ─── [torterra]
+#                                                       ├─ [chimchar]
+#                                                       └─ [piplup]
+
+# Add commits to sceptile branch
+exec git checkout -b treecko
+
+exec write_file treecko.txt treecko
+exec git add .
+exec git commit -m 'Add treecko.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to torterra branch
+exec git checkout -b torterra
+
+exec write_file torterra.txt torterra
+exec git add .
+exec git commit -m 'Add torterra.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to infernape branch
+exec git checkout treecko
+exec git checkout -b infernape
+
+exec write_file infernape.txt infernape
+exec git add .
+exec git commit -m 'Add infernape.txt' --date $GIT_COMMITTER_DATE
+
+
+# Add commits to empoleon branch
+exec git checkout treecko
+exec git checkout -b empoleon
+
+exec write_file empoleon.txt empoleon
+exec git add .
+exec git commit -m 'Add empoleon.txt' --date $GIT_COMMITTER_DATE
+
+
+# Initialize git-tree
+exec git-tree init
+
+
+# Add new commits to upstream branch
+exec git checkout treecko
+
+exec write_file grovyle.txt grovyle
+exec git add .
+exec git commit -m 'Add grovyle.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file sceptile.txt sceptile
+exec git add .
+exec git commit -m 'Add sceptile.txt' --date $GIT_COMMITTER_DATE
+
+
+# Split the commits in the graph.
+exec git checkout torterra
+exec git rebase -i HEAD~2
+
+# Add the new commits.
+exec write_file turtwig.txt turtwig
+exec git add .
+exec git commit -m 'Add turtwig.txt' --date $GIT_COMMITTER_DATE
+
+exec write_file grotle.txt grotle
+exec git add .
+exec git commit -m 'Add grotle.txt' --date $GIT_COMMITTER_DATE
+
+# Continue the rebase.
+exec git rebase --continue
+
+
+# --- TEST ---
+
+# Run evolve
+exec git-tree evolve
+
+# BUG: The old commit still exists in the repository, since it's pointed to by
+# branch `git-tree-root`. Fix `git-tree-root` target instead of dropping git-tree.
+exec git-tree drop
+
+# Compare the git log
+exec git log --oneline --graph --all --decorate
+cp stdout .git/actual-log
+exec compare .git/actual-log .git/golden-log
+
+
+-- .git/tree/rebase-instructs --
+edit 68f0d35 Add treecko.txt
+pick 134618a Add torterra.txt
+-- .git/golden-log --
+* c9ecd3e (empoleon) Add empoleon.txt
+| * 210e275 (infernape) Add infernape.txt
+|/  
+| * 8547881 (HEAD -> torterra) Add torterra.txt
+| * 996a5d4 Add grotle.txt
+| * 68f964b Add turtwig.txt
+|/  
+* 689eb6b (treecko) Add sceptile.txt
+* 64f5fcb Add grovyle.txt
+* 68f0d35 Add treecko.txt
+* a7c56ea (master) Add dummy.txt
+* cbfe4ef initial commit
