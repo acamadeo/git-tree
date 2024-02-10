@@ -85,3 +85,7 @@ func TestE2eEvolveSimple(t *testing.T) {
 func TestE2eEvolveDescendants(t *testing.T) {
 	testscript.Run(t, testscriptParams("evolve/descendants"))
 }
+
+func TestE2eEvolveCombinations(t *testing.T) {
+	testscript.Run(t, testscriptParams("evolve/combinations"))
+}
