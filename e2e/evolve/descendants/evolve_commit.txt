@@ -1,5 +1,5 @@
-# Evolve works in nested tree after for upstream commits
-# ======================================================
+# Evolve resolves commit graph after adding commits to an upstream branch
+# =======================================================================
 
 # --- SETUP ---
 
