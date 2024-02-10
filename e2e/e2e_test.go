@@ -82,6 +82,6 @@ func TestE2eEvolveSimple(t *testing.T) {
 	testscript.Run(t, testscriptParams("evolve/simple"))
 }
 
-func TestE2eEvolveNested(t *testing.T) {
-	testscript.Run(t, testscriptParams("evolve/nested"))
+func TestE2eEvolveDescendants(t *testing.T) {
+	testscript.Run(t, testscriptParams("evolve/descendants"))
 }

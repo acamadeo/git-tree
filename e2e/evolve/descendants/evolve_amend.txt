@@ -1,5 +1,5 @@
-# Evolve works for nested amends
-# ==============================
+# Evolve resolves commit graph after amending a commit
+# ====================================================
 
 # --- SETUP ---
 
